@@ -42,7 +42,8 @@ extension CardState {
             var response = try cmdSet.cardVerifyPIN(pin: pinBytes)
             var rapdu = try cmdSet.cardSetLabel(label: cardLabelToSet)
             if rapdu {
-                self.cardLabel = cardLabelToSet
+                let newLabel = cardLabelToSet
+                DispatchQueue.main.async { self.cardLabel = newLabel }
                 self.cardLabelToSet = nil
             }
             session?.stop(alertMessage: String(localized: "nfcLabelSetSuccess"))
@@ -105,14 +106,14 @@ extension CardState {
             try checkEqual(rapdu.sw, StatusWord.ok.rawValue, tag: "Function: \(#function), line: \(#line)")
             
             try checkEqual(fingerprintBytes, secretFingerprintBytes, tag: "Function: \(#function), line: \(#line)")
-            
-            homeNavigationPath.append(NavigationRoutes.generateSuccess(label))
-            
+
+            DispatchQueue.main.async { self.homeNavigationPath.append(NavigationRoutes.generateSuccess(label)) }
+
         } catch let error {
             session?.stop(errorMessage: friendlyError(error.localizedDescription))
             logEvent(log: LogModel(type: .error, message: "onManualImportPasswordSecret : \(error.localizedDescription)"))
         }
-        
+
         session?.stop(alertMessage: String(localized: "nfcSecretAdded"))
     }
     
@@ -157,17 +158,17 @@ extension CardState {
             try checkEqual(rapdu.sw, StatusWord.ok.rawValue, tag: "Function: \(#function), line: \(#line)")
             
             try checkEqual(fingerprintBytes, secretFingerprintBytes, tag: "Function: \(#function), line: \(#line)")
-                        
-            homeNavigationPath.append(NavigationRoutes.generateSuccess(label))
-            
+
+            DispatchQueue.main.async { self.homeNavigationPath.append(NavigationRoutes.generateSuccess(label)) }
+
         } catch let error {
             session?.stop(errorMessage: friendlyError(error.localizedDescription))
             logEvent(log: LogModel(type: .error, message: "onManualImportMnemonicSecret : \(error.localizedDescription)"))
         }
-        
+
         session?.stop(alertMessage: String(localized: "nfcSecretAdded"))
     }
-    
+
     // *********************************************************
     // MARK: - Add secret
     // *********************************************************
@@ -224,17 +225,17 @@ extension CardState {
             try checkEqual(rapdu.sw, StatusWord.ok.rawValue, tag: "Function: \(#function), line: \(#line)")
             
             try checkEqual(fingerprintBytes, secretFingerprintBytes, tag: "Function: \(#function), line: \(#line)")
-                        
-            homeNavigationPath.append(NavigationRoutes.generateSuccess(label))
-            
+
+            DispatchQueue.main.async { self.homeNavigationPath.append(NavigationRoutes.generateSuccess(label)) }
+
         } catch let error {
             session?.stop(errorMessage: friendlyError(error.localizedDescription))
             logEvent(log: LogModel(type: .error, message: "onAddMnemonicSecret : \(error.localizedDescription)"))
         }
-        
+
         session?.stop(alertMessage: String(localized: "nfcSecretAdded"))
     }
-    
+
     // SECRET_TYPE_PASSWORD (subtype 0x01): [password_size(1b) | password | login_size(1b) | login | url_size(1b) | url]
     private func onAddPasswordSecret(cardChannel: CardChannel) -> Void {
         guard let pinForMasterCard = pinForMasterCard else {
@@ -273,9 +274,9 @@ extension CardState {
             try checkEqual(rapdu.sw, StatusWord.ok.rawValue, tag: "Function: \(#function), line: \(#line)")
             
             try checkEqual(fingerprintBytes, secretFingerprintBytes, tag: "Function: \(#function), line: \(#line)")
-            
-            homeNavigationPath.append(NavigationRoutes.generateSuccess(label))
-            
+
+            DispatchQueue.main.async { self.homeNavigationPath.append(NavigationRoutes.generateSuccess(label)) }
+
         } catch let error {
             session?.stop(errorMessage: friendlyError(error.localizedDescription))
             logEvent(log: LogModel(type: .error, message: "onAddPasswordSecret : \(error.localizedDescription)"))
@@ -308,7 +309,7 @@ extension CardState {
         do {
             var pinResponse = try cmdSet.cardVerifyPIN(pin: pinBytes)
             var result = try cmdSet.seedkeeperExportSecret(sid: currentSecretHeader.sid)
-            self.currentSecretObject = result
+            DispatchQueue.main.async { self.currentSecretObject = result }
             session?.stop(alertMessage: "Secret fetched")
             print("seedkeeperExportSecret : \(result)")
         } catch let error {
@@ -344,7 +345,8 @@ extension CardState {
         do {
             var pinResponse = try cmdSet.cardVerifyPIN(pin: pinBytes)
             var secrets: [SeedkeeperSecretHeader] = try cmdSet.seedkeeperListSecretHeaders()
-            self.masterSecretHeaders = secrets.map { SeedkeeperSecretHeaderDto(secretHeader: $0) }
+            let headers = secrets.map { SeedkeeperSecretHeaderDto(secretHeader: $0) }
+            DispatchQueue.main.async { self.masterSecretHeaders = headers }
             session?.stop(alertMessage: String(localized: "nfcSecretsListSuccess"))
             print("Secrets: \(secrets)")
         } catch let error {
@@ -377,7 +379,7 @@ extension CardState {
             var response = try cmdSet.cardVerifyPIN(pin: pinBytes)
             var rapdu = try cmdSet.seedkeeperResetSecret(sid: currentSecretHeader.sid)
             try checkEqual(rapdu.sw, StatusWord.ok.rawValue, tag: "Function: \(#function), line: \(#line)")
-            homeNavigationPath.removeLast()
+            DispatchQueue.main.async { self.homeNavigationPath.removeLast() }
             session?.stop(alertMessage: "nfcSecretDeleted")
         } catch let error {
             logEvent(log: LogModel(type: .error, message: "onDeleteSecret : \(error.localizedDescription)"))
@@ -409,7 +411,7 @@ extension CardState {
             let paths = [ "m/0/0/0"]
             var response = try cmdSet.cardVerifyPIN(pin: pinBytes)
             let xpub = try cmdSet.cardBip32GetXpub(path: "m/0/0/0", xtype: XPUB_HEADERS_MAINNET.standard.rawValue, sid: currentSecretHeader.sid)
-            currentSecretString = xpub
+            DispatchQueue.main.async { self.currentSecretString = xpub }
             session?.stop(alertMessage: "nfcXpubFetchSuccess")
         } catch let error {
             logEvent(log: LogModel(type: .error, message: "onGetXpub : \(error.localizedDescription)"))

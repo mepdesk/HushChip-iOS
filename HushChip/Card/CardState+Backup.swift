@@ -89,7 +89,7 @@ extension CardState {
             self.secretsForBackup = fetchedSecretsFromCard
             
             print("secretsToImport : \(fetchedSecretsFromCard)")
-            mode = .backupExport
+            DispatchQueue.main.async { self.mode = .backupExport }
             session?.stop(alertMessage: String(localized: "nfcSecretsListSuccess"))
         } catch let error {
             let friendly = friendlyError(error.localizedDescription)
@@ -141,10 +141,13 @@ extension CardState {
         
         let (statusApdu, cardType) = try await fetchCardStatus()
 
-        backupCardStatus = try CardStatus(rapdu: statusApdu)
-        
-        if let cardStatus = backupCardStatus, !cardStatus.setupDone {
-            let version = getCardVersionInt(cardStatus: cardStatus)
+        guard let bkStatus = try CardStatus(rapdu: statusApdu) else {
+            throw SatocardError.invalidResponse
+        }
+        DispatchQueue.main.async { self.backupCardStatus = bkStatus }
+
+        if !bkStatus.setupDone {
+            let version = getCardVersionInt(cardStatus: bkStatus)
             if version <= 0x00010001 {
                 DispatchQueue.main.async { [weak self] in
                     guard let self = self else { return }
@@ -178,8 +181,8 @@ extension CardState {
         // try await verifyCardAuthenticity(cardType: .backup)
         try await fetchAuthentikey(cardType: .backup)
         
-        self.mode = .backupImport
-        
+        DispatchQueue.main.async { self.mode = .backupImport }
+
         session?.stop(alertMessage: String(localized: "nfcBackupCardPairedSuccess"))
     }
 }

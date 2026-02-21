@@ -57,6 +57,9 @@ class CardState: ObservableObject {
     
     var session: SatocardController?
     var cardController: SatocardController?
+
+    /// Prevents overlapping NFC sessions. Set true when a scan starts, false when it ends.
+    private var isSessionActive = false
     
     private(set) var isPinVerificationSuccess: Bool = false
     
@@ -102,6 +105,11 @@ class CardState: ObservableObject {
     // *********************************************************
     func scan() {
         print("CardState scan()")
+        guard !isSessionActive else {
+            print("CardState scan() — session already active, ignoring")
+            return
+        }
+        isSessionActive = true
         DispatchQueue.main.async {
             self.resetState()
         }
@@ -134,9 +142,12 @@ class CardState: ObservableObject {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         }
 
-        cardStatus = try CardStatus(rapdu: statusApdu)
-        
-        if let cardStatus = cardStatus, !cardStatus.setupDone {
+        guard let status = try CardStatus(rapdu: statusApdu) else {
+            throw SatocardError.invalidResponse
+        }
+        DispatchQueue.main.async { self.cardStatus = status }
+
+        if !status.setupDone {
             // let version = getCardVersionInt(cardStatus: cardStatus)
             // if version <= 0x00010001 {
                 DispatchQueue.main.async { [weak self] in
@@ -197,9 +208,13 @@ class CardState: ObservableObject {
                 
         do {
             let secrets: [SeedkeeperSecretHeader] = try cmdSet.seedkeeperListSecretHeaders()
-            self.masterSecretHeaders = secrets.map { SeedkeeperSecretHeaderDto(secretHeader: $0) }
+            let headers = secrets.map { SeedkeeperSecretHeaderDto(secretHeader: $0) }
             let fetchedLabel = try cmdSet.cardGetLabel()
-            self.cardLabel = !fetchedLabel.isEmpty ? fetchedLabel : "n/a"
+            let label = !fetchedLabel.isEmpty ? fetchedLabel : "n/a"
+            DispatchQueue.main.async {
+                self.masterSecretHeaders = headers
+                self.cardLabel = label
+            }
             print("Secrets: \(secrets)")
         } catch let error {
             logEvent(log: LogModel(type: .error, message: "onConnection : \(error.localizedDescription)"))
@@ -213,6 +228,7 @@ class CardState: ObservableObject {
     // MARK: - On disconnection
     // *********************************************************
     func onDisconnection(error: Error) {
-        // Handle disconnection
+        isSessionActive = false
+        session = nil
     }
 }

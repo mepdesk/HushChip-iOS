@@ -40,7 +40,7 @@ extension CardState {
         do {
             var rapdu = try cmdSet.cardChangePIN(oldPin: pinBytes, newPin: pinBytesNew)
             print("Pin Updated")
-            homeNavigationPath.removeLast()
+            DispatchQueue.main.async { self.homeNavigationPath.removeLast() }
             session?.stop(alertMessage: String(localized: "nfcPinCodeUpdateSuccess"))
         } catch let error {
             print("Error: \(error)")
@@ -74,7 +74,7 @@ extension CardState {
             print("Pin Set")
             let (_, _, authentikeyHex) = try cmdSet.cardGetAuthentikey()
             session?.stop(alertMessage: String(localized: "nfcPinCodeSetSuccess"))
-            homeNavigationPath = .init()
+            DispatchQueue.main.async { self.homeNavigationPath = .init() }
             // homeNavigationPath.append(NavigationRoutes.setupFaceId(pin))
         } catch let error {
             print("Error: \(error)")
@@ -108,12 +108,12 @@ extension CardState {
             rapdu = try cmdSet.cardSetup(pin_tries0: 5, pin0: pinBytes)
             print("Pin Set")
             session?.stop(alertMessage: String(localized: "nfcPinCodeSetSuccess"))
-            popToBackupFlow()
+            DispatchQueue.main.async { self.popToBackupFlow() }
         } catch let error {
             print("Error: \(error)")
             session?.stop(alertMessage: String(localized: "nfcPinCodeSetFailed"))
         }
-        
+
         pinCodeToSetup = nil
     }
 }

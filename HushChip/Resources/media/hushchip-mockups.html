@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HushChip — Feature Mockups</title>
+<meta name="theme-color" content="#09090b">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #09090b; --bg-raised: #0e0e10; --bg-surface: #111113;
+    --border: #1a1a1e; --border-hover: #28282e;
+    --text-ghost: #38383e; --text-faint: #5a5a64; --text-muted: #8a8a96;
+    --text-body: #a8a8b4; --text-bright: #cdcdd6; --text-white: #e4e4ec;
+    --accent: #b4975a;
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg); color: var(--text-body);
+    font-family: 'Outfit', sans-serif; font-weight: 300; line-height: 1.7;
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  }
+  ::selection { background: rgba(255,255,255,0.06); color: var(--text-white); }
+
+  /* PAGE LAYOUT */
+  .mockup-page { max-width: 800px; margin: 0 auto; padding: 60px 24px 120px; }
+
+  .mockup-header {
+    text-align: center; margin-bottom: 80px; padding-bottom: 60px;
+    border-bottom: 1px solid var(--border);
+  }
+  .mockup-header h1 {
+    font-size: 28px; font-weight: 200; color: var(--text-bright);
+    letter-spacing: 8px; text-transform: uppercase; text-indent: 8px;
+    margin-bottom: 16px;
+  }
+  .mockup-header p {
+    font-size: 14px; font-weight: 300; color: var(--text-faint);
+  }
+
+  /* SECTION DIVIDERS */
+  .mockup-section { margin-bottom: 100px; }
+  .mockup-num {
+    font-size: 10px; font-weight: 400; letter-spacing: 6px;
+    text-transform: uppercase; color: var(--text-ghost);
+    margin-bottom: 12px; text-align: center; text-indent: 6px;
+  }
+  .mockup-title {
+    font-size: 20px; font-weight: 200; color: var(--text-bright);
+    text-align: center; margin-bottom: 8px; letter-spacing: 0.5px;
+  }
+  .mockup-subtitle {
+    font-size: 13px; font-weight: 300; color: var(--text-faint);
+    text-align: center; margin-bottom: 48px; line-height: 1.8;
+    max-width: 500px; margin-left: auto; margin-right: auto;
+  }
+  .mockup-note {
+    font-size: 11px; font-weight: 300; color: var(--text-ghost);
+    text-align: center; margin-top: 32px; font-style: italic;
+    line-height: 1.7;
+  }
+
+  /* CONTEXT BAR — shows where this sits on the real page */
+  .context-bar {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 12px 20px; border: 1px dashed var(--border-hover);
+    border-radius: 8px; margin-bottom: 24px;
+    font-size: 10px; font-weight: 400; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--text-ghost);
+  }
+  .context-bar .arrow { color: var(--text-faint); }
+
+  /* ========================================
+     MOCKUP 1: APP SCREENSHOT SECTION
+     ======================================== */
+  .app-section {
+    text-align: center; padding: 60px 0;
+  }
+  .app-section-label {
+    font-size: 10px; font-weight: 400; letter-spacing: 6px;
+    text-transform: uppercase; color: var(--text-ghost);
+    margin-bottom: 40px; text-indent: 6px;
+  }
+  .app-layout {
+    display: flex; align-items: center; justify-content: center; gap: 48px;
+  }
+  /* Phone mockup */
+  .phone-frame {
+    width: 180px; height: 360px; border-radius: 24px;
+    border: 2px solid var(--border-hover);
+    background: var(--bg-surface); overflow: hidden;
+    position: relative; flex-shrink: 0;
+  }
+  .phone-notch {
+    width: 60px; height: 16px; background: var(--bg);
+    border-radius: 0 0 12px 12px; margin: 0 auto;
+  }
+  .phone-screen { padding: 20px 14px 14px; }
+  .phone-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .phone-nav-title {
+    font-size: 8px; font-weight: 400; letter-spacing: 3px;
+    text-transform: uppercase; color: var(--text-muted);
+  }
+  .phone-nav-dots {
+    width: 12px; height: 12px; border-radius: 50%;
+    border: 1px solid var(--border-hover);
+  }
+  .phone-health-bar {
+    height: 3px; background: var(--border); border-radius: 2px;
+    margin-bottom: 16px; overflow: hidden;
+  }
+  .phone-health-fill {
+    height: 100%; width: 35%; background: var(--text-faint);
+    border-radius: 2px;
+  }
+  .phone-secret-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .phone-secret-icon {
+    width: 22px; height: 22px; border-radius: 4px;
+    background: var(--bg-surface); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 7px; font-weight: 400; color: var(--text-faint);
+    flex-shrink: 0;
+  }
+  .phone-secret-label {
+    font-size: 8px; font-weight: 400; color: var(--text-body);
+    letter-spacing: 0.3px;
+  }
+  .phone-secret-type {
+    font-size: 6px; font-weight: 300; color: var(--text-faint);
+    letter-spacing: 0.5px; margin-top: 2px;
+  }
+  .phone-tab-bar {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 36px; border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-around;
+    background: rgba(9,9,11,0.9);
+  }
+  .phone-tab {
+    font-size: 6px; font-weight: 400; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--text-ghost);
+  }
+  .phone-tab.active { color: var(--text-muted); }
+
+  /* App text alongside phone */
+  .app-text { text-align: left; max-width: 300px; }
+  .app-text-heading {
+    font-size: 14px; font-weight: 300; color: var(--text-bright);
+    letter-spacing: 0.3px; margin-bottom: 12px; line-height: 1.6;
+  }
+  .app-text-body {
+    font-size: 12px; font-weight: 300; color: var(--text-faint);
+    line-height: 1.8; margin-bottom: 20px;
+  }
+  .app-badges { display: flex; gap: 12px; }
+  .app-badge {
+    padding: 8px 16px; border: 1px solid var(--border);
+    border-radius: 6px; font-size: 9px; font-weight: 400;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--text-ghost); text-decoration: none;
+    transition: border-color 0.3s, color 0.3s;
+  }
+  .app-badge:hover { border-color: var(--border-hover); color: var(--text-faint); }
+
+  /* ========================================
+     MOCKUP 2: EXPANDABLE FEATURE GRID
+     ======================================== */
+  .features {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    border: 1px solid var(--border); border-radius: 0;
+    max-width: 680px; margin: 0 auto;
+  }
+  .feature {
+    padding: 36px 28px; border: 1px solid var(--border);
+    transition: background 0.3s; cursor: pointer;
+    position: relative; overflow: hidden;
+  }
+  .feature:hover { background: var(--bg-raised); }
+  .feature-title {
+    font-size: 12px; font-weight: 400; letter-spacing: 3px;
+    text-transform: uppercase; color: var(--text-body);
+    margin-bottom: 10px;
+  }
+  .feature-desc {
+    font-size: 13px; font-weight: 300; color: var(--text-faint);
+    line-height: 1.7;
+  }
+  .feature-expand {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s;
+    opacity: 0;
+  }
+  .feature.open .feature-expand {
+    max-height: 120px; opacity: 1;
+  }
+  .feature-expand-text {
+    padding-top: 14px; margin-top: 14px;
+    border-top: 1px solid var(--border);
+    font-size: 12px; font-weight: 300; color: var(--text-muted);
+    line-height: 1.8;
+  }
+  .feature-plus {
+    position: absolute; top: 16px; right: 16px;
+    font-size: 12px; color: var(--text-ghost);
+    transition: transform 0.3s, color 0.3s;
+  }
+  .feature.open .feature-plus {
+    transform: rotate(45deg); color: var(--text-faint);
+  }
+
+  /* ========================================
+     MOCKUP 3: QUANTITY SELECTOR + BUY
+     ======================================== */
+  .buy-mockup { text-align: center; max-width: 440px; margin: 0 auto; }
+
+  .qty-selector {
+    display: flex; border: 1px solid var(--border); border-radius: 2px;
+    margin: 0 auto 32px; max-width: 360px; overflow: hidden;
+  }
+  .qty-option {
+    flex: 1; padding: 14px 8px; text-align: center; cursor: pointer;
+    border-right: 1px solid var(--border);
+    transition: background 0.3s, border-color 0.3s;
+    background: transparent;
+  }
+  .qty-option:last-child { border-right: none; }
+  .qty-option:hover { background: var(--bg-raised); }
+  .qty-option.active {
+    background: var(--bg-raised);
+    border-color: var(--border-hover);
+  }
+  .qty-count {
+    font-size: 11px; font-weight: 400; letter-spacing: 3px;
+    text-transform: uppercase; color: var(--text-body);
+    margin-bottom: 4px; display: block;
+  }
+  .qty-option.active .qty-count { color: var(--text-bright); }
+  .qty-price {
+    font-size: 10px; font-weight: 300; color: var(--text-faint);
+    display: block;
+  }
+  .qty-option.active .qty-price { color: var(--text-muted); }
+  .qty-save {
+    font-size: 9px; font-weight: 400; color: var(--accent);
+    display: block; margin-top: 3px; letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .buy-price-display {
+    font-size: clamp(32px, 5vw, 44px); font-weight: 200;
+    color: var(--accent); letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .buy-narrative {
+    font-size: 12px; font-weight: 300; color: var(--text-faint);
+    margin-bottom: 8px; min-height: 20px;
+    transition: opacity 0.3s;
+  }
+  .buy-includes-text {
+    font-size: 11px; font-weight: 300; color: var(--text-ghost);
+    letter-spacing: 0.5px; margin-bottom: 28px;
+  }
+  .buy-buttons-mock { display: flex; gap: 12px; justify-content: center; margin-bottom: 24px; }
+  .btn-mock {
+    padding: 15px 32px; border-radius: 2px;
+    font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 400;
+    letter-spacing: 4px; text-transform: uppercase;
+    cursor: pointer; transition: all 0.3s;
+  }
+  .btn-mock-primary {
+    background: var(--border); border: 1px solid var(--border-hover);
+    color: var(--text-bright);
+  }
+  .btn-mock-primary:hover { border-color: var(--accent); }
+  .btn-mock-secondary {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+  .btn-mock-secondary:hover { border-color: var(--accent); }
+
+  .buy-trust-mock {
+    display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;
+  }
+  .trust-item-mock {
+    font-size: 10px; font-weight: 400; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--text-ghost);
+  }
+
+  /* ========================================
+     MOCKUP 4: HUSHCHIP PROTECT (CHECKOUT)
+     ======================================== */
+  .checkout-mockup {
+    max-width: 420px; margin: 0 auto;
+    border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden;
+  }
+  .checkout-header {
+    padding: 24px 28px 20px; border-bottom: 1px solid var(--border);
+  }
+  .checkout-title {
+    font-size: 11px; font-weight: 400; letter-spacing: 4px;
+    text-transform: uppercase; color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .checkout-subtitle {
+    font-size: 12px; font-weight: 300; color: var(--text-faint);
+  }
+
+  .checkout-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 28px; border-bottom: 1px solid var(--border);
+  }
+  .checkout-item-left { display: flex; align-items: center; gap: 14px; }
+  .checkout-item-icon {
+    width: 36px; height: 24px; border-radius: 4px;
+    border: 1px solid var(--border-hover); background: var(--bg-surface);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .checkout-item-chip {
+    width: 10px; height: 7px; border-radius: 1px;
+    background: var(--accent); opacity: 0.7;
+  }
+  .checkout-item-name {
+    font-size: 13px; font-weight: 300; color: var(--text-body);
+  }
+  .checkout-item-qty {
+    font-size: 10px; font-weight: 300; color: var(--text-faint);
+    margin-top: 2px;
+  }
+  .checkout-item-price {
+    font-size: 13px; font-weight: 300; color: var(--text-body);
+  }
+
+  /* Protect upsell */
+  .protect-upsell {
+    padding: 24px 28px; border-bottom: 1px solid var(--border);
+    cursor: pointer; transition: background 0.3s;
+  }
+  .protect-upsell:hover { background: var(--bg-raised); }
+  .protect-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .protect-left { display: flex; align-items: center; gap: 12px; }
+  .protect-checkbox {
+    width: 18px; height: 18px; border-radius: 3px;
+    border: 1.5px solid var(--border-hover); background: transparent;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.3s, background 0.3s;
+    flex-shrink: 0;
+  }
+  .protect-upsell.checked .protect-checkbox {
+    border-color: var(--accent); background: rgba(180,151,90,0.12);
+  }
+  .protect-check {
+    font-size: 11px; color: var(--accent); display: none;
+  }
+  .protect-upsell.checked .protect-check { display: block; }
+  .protect-label {
+    font-size: 12px; font-weight: 400; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--text-body);
+  }
+  .protect-price {
+    font-size: 12px; font-weight: 300; color: var(--text-muted);
+  }
+  .protect-desc {
+    font-size: 11px; font-weight: 300; color: var(--text-faint);
+    line-height: 1.7; padding-left: 30px;
+  }
+
+  /* Checkout total */
+  .checkout-total {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 28px;
+  }
+  .checkout-total-label {
+    font-size: 11px; font-weight: 400; letter-spacing: 3px;
+    text-transform: uppercase; color: var(--text-faint);
+  }
+  .checkout-total-price {
+    font-size: 18px; font-weight: 200; color: var(--text-bright);
+  }
+
+  .checkout-pay-btn {
+    display: block; width: calc(100% - 56px); margin: 0 28px 24px;
+    padding: 14px; border-radius: 2px;
+    background: var(--border); border: 1px solid var(--border-hover);
+    font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 400;
+    letter-spacing: 4px; text-transform: uppercase;
+    color: var(--text-bright); cursor: pointer;
+    transition: border-color 0.3s;
+  }
+  .checkout-pay-btn:hover { border-color: var(--accent); }
+
+  /* ========================================
+     RESPONSIVE
+     ======================================== */
+  @media (max-width: 768px) {
+    .features { grid-template-columns: 1fr; }
+    .app-layout { flex-direction: column; gap: 32px; }
+    .app-text { text-align: center; }
+    .app-badges { justify-content: center; }
+    .buy-buttons-mock { flex-direction: column; align-items: center; }
+    .btn-mock { width: 100%; max-width: 280px; }
+    .qty-selector { max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="mockup-page">
+
+  <div class="mockup-header">
+    <h1>Mockups</h1>
+    <p>Four proposed additions to hushchip.co.uk. Review each and decide what ships.</p>
+  </div>
+
+  <!-- ==========================================
+       MOCKUP 1: APP SCREENSHOT SECTION
+       ========================================== -->
+  <div class="mockup-section">
+    <div class="mockup-num">Mockup 01</div>
+    <div class="mockup-title">App Section</div>
+    <div class="mockup-subtitle">
+      One phone mockup between "How It Works" and "Why HushChip".
+      No carousel. No gallery. One image, one message.
+    </div>
+
+    <div class="context-bar">
+      How It Works <span class="arrow">&rarr;</span> <strong>This Section</strong> <span class="arrow">&rarr;</span> Why HushChip
+    </div>
+
+    <div class="app-section">
+      <div class="app-section-label" style="text-indent: 6px;">The App</div>
+      <div class="app-layout">
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="phone-nav">
+              <div class="phone-nav-title">Your Card</div>
+              <div class="phone-nav-dots"></div>
+            </div>
+            <div class="phone-health-bar"><div class="phone-health-fill"></div></div>
+            <div class="phone-secret-row">
+              <div class="phone-secret-icon">Aa</div>
+              <div>
+                <div class="phone-secret-label">Bitcoin Wallet</div>
+                <div class="phone-secret-type">BIP39 Mnemonic</div>
+              </div>
+            </div>
+            <div class="phone-secret-row">
+              <div class="phone-secret-icon" style="font-size: 10px;">&bull;</div>
+              <div>
+                <div class="phone-secret-label">Bitwarden Master</div>
+                <div class="phone-secret-type">Password</div>
+              </div>
+            </div>
+            <div class="phone-secret-row">
+              <div class="phone-secret-icon">{ }</div>
+              <div>
+                <div class="phone-secret-label">Sparrow Descriptor</div>
+                <div class="phone-secret-type">Wallet Descriptor</div>
+              </div>
+            </div>
+            <div class="phone-secret-row">
+              <div class="phone-secret-icon" style="font-size: 10px;">&bull;</div>
+              <div>
+                <div class="phone-secret-label">ProtonMail Recovery</div>
+                <div class="phone-secret-type">Password</div>
+              </div>
+            </div>
+            <div class="phone-secret-row">
+              <div class="phone-secret-icon">T</div>
+              <div>
+                <div class="phone-secret-label">Recovery Codes</div>
+                <div class="phone-secret-type">Free Text</div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-tab-bar">
+            <div class="phone-tab active">Card</div>
+            <div class="phone-tab">Generate</div>
+            <div class="phone-tab">Settings</div>
+          </div>
+        </div>
+        <div class="app-text">
+          <div class="app-text-heading">Tap your card. See your secrets.<br>Nothing leaves the chip.</div>
+          <div class="app-text-body">The HushChip app talks to your card over NFC. No internet. No accounts. No cloud. Your secrets stay on the chip.</div>
+          <div class="app-badges">
+            <a href="#" class="app-badge">App Store</a>
+            <a href="#" class="app-badge">Google Play</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mockup-note">
+      This replaces the gap between "How It Works" and "Why HushChip".<br>
+      One phone mockup. Side-by-side on desktop, stacked on mobile.<br>
+      Only add this when the app has real screenshots to show.
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MOCKUP 2: EXPANDABLE FEATURE GRID
+       ========================================== -->
+  <div class="mockup-section">
+    <div class="mockup-num">Mockup 02</div>
+    <div class="mockup-title">Expandable Feature Grid</div>
+    <div class="mockup-subtitle">
+      Same six cells. Click any cell to reveal one extra sentence of detail.
+      Adds trust depth without adding scroll length. Click the cells below to try.
+    </div>
+
+    <div class="context-bar">
+      Replaces the existing "Why HushChip" grid in place
+    </div>
+
+    <div class="features">
+      <div class="feature" onclick="this.classList.toggle('open')">
+        <span class="feature-plus">+</span>
+        <div class="feature-title">Discreet</div>
+        <div class="feature-desc">No branding. No logos. No crypto references. The card reveals nothing.</div>
+        <div class="feature-expand">
+          <div class="feature-expand-text">It looks like a hotel key card. Sits in your wallet next to bank cards, invisible. Nobody knows what it holds unless you tell them.</div>
+        </div>
+      </div>
+      <div class="feature" onclick="this.classList.toggle('open')">
+        <span class="feature-plus">+</span>
+        <div class="feature-title">Affordable</div>
+        <div class="feature-desc">Under &pound;10 including UK shipping. A fraction of the alternatives.</div>
+        <div class="feature-expand">
+          <div class="feature-expand-text">SeedKeeper cards from Satochip cost &pound;21+. Metal seed plates start at &pound;15. HushChip gives you EAL6+ encryption for less than a takeaway.</div>
+        </div>
+      </div>
+      <div class="feature" onclick="this.classList.toggle('open')">
+        <span class="feature-plus">+</span>
+        <div class="feature-title">Secure</div>
+        <div class="feature-desc">EAL6+ certified secure element. PIN protected. Locks permanently after failed attempts.</div>
+        <div class="feature-expand">
+          <div class="feature-expand-text">The same chip class used in passports and banking cards. Your PIN is verified on the chip itself. No software, no server, no backdoor.</div>
+        </div>
+      </div>
+      <div class="feature" onclick="this.classList.toggle('open')">
+        <span class="feature-plus">+</span>
+        <div class="feature-title">Open Source</div>
+        <div class="feature-desc">Every line of code is on GitHub. AGPLv3 licensed. Verify it yourself.</div>
+        <div class="feature-expand">
+          <div class="feature-expand-text">The applet is an unmodified fork of a public repository. No hidden code. No telemetry. You can compile it from source and flash it yourself.</div>
+        </div>
+      </div>
+      <div class="feature" onclick="this.classList.toggle('open')">
+        <span class="feature-plus">+</span>
+        <div class="feature-title">UK Based</div>
+        <div class="feature-desc">Ships from the UK. Fast delivery. No customs. No hassle.</div>
+        <div class="feature-expand">
+          <div class="feature-expand-text">Alternatives ship from Belgium or China with customs fees and delays. HushChip posts next day via Royal Mail in a plain envelope.</div>
+        </div>
+      </div>
+      <div class="feature" onclick="this.classList.toggle('open')">
+        <span class="feature-plus">+</span>
+        <div class="feature-title">Offline</div>
+        <div class="feature-desc">No accounts. No cloud. No data collection. Your secrets never touch the internet.</div>
+        <div class="feature-expand">
+          <div class="feature-expand-text">The app communicates with your card via NFC only. No WiFi. No Bluetooth. No server calls. Even the app works without an internet connection.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mockup-note">
+      Replaces the existing grid in place. Same footprint when collapsed.<br>
+      The + icon rotates to &times; when open. Only one extra sentence per cell.<br>
+      Smooth max-height animation, same easing as the FAQ accordion.
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MOCKUP 3: QUANTITY SELECTOR + BUY
+       ========================================== -->
+  <div class="mockup-section">
+    <div class="mockup-num">Mockup 03</div>
+    <div class="mockup-title">Quantity Selector</div>
+    <div class="mockup-subtitle">
+      Three options. Price updates. Savings shown. Narrative appears for 3-pack.
+      Click the options below to try.
+    </div>
+
+    <div class="context-bar">
+      Replaces the existing "Order" buy section in place
+    </div>
+
+    <div class="buy-mockup">
+      <div class="qty-selector">
+        <div class="qty-option active" onclick="selectQty(this, 1)">
+          <span class="qty-count">1 Card</span>
+          <span class="qty-price">&pound;9.99</span>
+        </div>
+        <div class="qty-option" onclick="selectQty(this, 2)">
+          <span class="qty-count">2 Cards</span>
+          <span class="qty-price">&pound;17.99</span>
+          <span class="qty-save">Save &pound;2</span>
+        </div>
+        <div class="qty-option" onclick="selectQty(this, 3)">
+          <span class="qty-count">3 Cards</span>
+          <span class="qty-price">&pound;24.99</span>
+          <span class="qty-save">Save &pound;5</span>
+        </div>
+      </div>
+
+      <div class="buy-price-display" id="buyPrice">&pound;9.99</div>
+      <div class="buy-narrative" id="buyNarrative">&nbsp;</div>
+      <div class="buy-includes-text">Includes UK shipping &mdash; plain envelope, no branding</div>
+
+      <div class="buy-buttons-mock">
+        <button class="btn-mock btn-mock-primary">Pay with Card</button>
+        <button class="btn-mock btn-mock-secondary">Pay with Bitcoin</button>
+      </div>
+
+      <div class="buy-trust-mock">
+        <span class="trust-item-mock">EAL6+ Certified</span>
+        <span class="trust-item-mock">Open Source</span>
+        <span class="trust-item-mock">No Data Collection</span>
+        <span class="trust-item-mock">Lightning + On-chain</span>
+      </div>
+    </div>
+
+    <div class="mockup-note">
+      Quantity selector sits above the price. Savings in gold accent.<br>
+      3-pack narrative: "One for you. One for backup. One for inheritance."<br>
+      Everything below (buttons, trust signals) stays identical.
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MOCKUP 4: HUSHCHIP PROTECT AT CHECKOUT
+       ========================================== -->
+  <div class="mockup-section">
+    <div class="mockup-num">Mockup 04</div>
+    <div class="mockup-title">HushChip Protect</div>
+    <div class="mockup-subtitle">
+      A checkout add-on, not a homepage section. This would be a pre-checkout<br>
+      interstitial page or part of a custom checkout flow. Click the checkbox to try.
+    </div>
+
+    <div class="context-bar">
+      Lives on a checkout / order-review page &mdash; NOT on the homepage
+    </div>
+
+    <div class="checkout-mockup">
+      <div class="checkout-header">
+        <div class="checkout-title">Your Order</div>
+        <div class="checkout-subtitle">Review before payment</div>
+      </div>
+
+      <div class="checkout-item">
+        <div class="checkout-item-left">
+          <div class="checkout-item-icon"><div class="checkout-item-chip"></div></div>
+          <div>
+            <div class="checkout-item-name">HushChip Card</div>
+            <div class="checkout-item-qty" style="font-size: 10px; color: var(--text-faint);">Qty: 1</div>
+          </div>
+        </div>
+        <div class="checkout-item-price">&pound;9.99</div>
+      </div>
+
+      <div class="protect-upsell" id="protectUpsell" onclick="toggleProtect()">
+        <div class="protect-top">
+          <div class="protect-left">
+            <div class="protect-checkbox"><span class="protect-check">&check;</span></div>
+            <div class="protect-label">HushChip Protect</div>
+          </div>
+          <div class="protect-price">+ &pound;2.99</div>
+        </div>
+        <div class="protect-desc">Free replacement if your card is lost, stolen, or damaged within 12 months. One claim per card.</div>
+      </div>
+
+      <div class="checkout-total">
+        <div class="checkout-total-label">Total</div>
+        <div class="checkout-total-price" id="checkoutTotal">&pound;9.99</div>
+      </div>
+
+      <button class="checkout-pay-btn">Continue to Payment</button>
+    </div>
+
+    <div class="mockup-note">
+      This is NOT on the homepage. It's a separate checkout page.<br>
+      On the homepage, just one trust signal line: "Optional replacement cover available".<br>
+      Clicking the row toggles the checkbox and updates the total.
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Quantity selector
+  function selectQty(el, qty) {
+    var options = document.querySelectorAll('.qty-option');
+    for (var i = 0; i < options.length; i++) {
+      options[i].classList.remove('active');
+    }
+    el.classList.add('active');
+
+    var priceEl = document.getElementById('buyPrice');
+    var narrativeEl = document.getElementById('buyNarrative');
+
+    if (qty === 1) {
+      priceEl.textContent = '\u00A39.99';
+      narrativeEl.innerHTML = '&nbsp;';
+    } else if (qty === 2) {
+      priceEl.textContent = '\u00A317.99';
+      narrativeEl.textContent = 'One for you. One for backup.';
+    } else if (qty === 3) {
+      priceEl.textContent = '\u00A324.99';
+      narrativeEl.textContent = 'One for you. One for backup. One for inheritance.';
+    }
+  }
+
+  // Protect checkbox
+  function toggleProtect() {
+    var upsell = document.getElementById('protectUpsell');
+    var total = document.getElementById('checkoutTotal');
+    upsell.classList.toggle('checked');
+    if (upsell.classList.contains('checked')) {
+      total.textContent = '\u00A312.98';
+    } else {
+      total.textContent = '\u00A39.99';
+    }
+  }
+</script>
+
+</body>
+</html>

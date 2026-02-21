@@ -1,0 +1,19 @@
+//
+//  Constants.swift
+//  Seedkeeper
+//
+//  Created by Lionel Delvaux on 21/06/2024.
+//
+
+import Foundation
+
+struct Constants {
+    static let moreInfo = "https://hushchip.co.uk"
+
+    struct Keys {
+        static let firstTimeUse = "isFirstTimeUse"
+        // True once the user has tapped "I understand" on the last onboarding screen.
+        // On a fresh install this key is absent, so bool(forKey:) returns false → show onboarding.
+        static let onboardingComplete = "onboardingComplete"
+    }
+}

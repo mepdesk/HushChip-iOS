@@ -23,11 +23,7 @@ import QRCode
 struct SKSecretViewer: View {
     @State private var showText: Bool = false
     @Binding var shouldShowQRCode: Bool
-    @Binding var contentText: String {
-        didSet {
-            print("contentText: \(contentText)")
-        }
-    }
+    @Binding var contentText: String
     var isEditable: Bool = false
     var userInputResult: ((String) -> Void)? = nil
 
@@ -81,9 +77,7 @@ struct SKSecretViewer: View {
                 if isEditable {
                     TextField("", text: $contentText, onEditingChanged: { (editingChanged) in
                         if editingChanged {
-                            print("TextField focused")
                         } else {
-                            print("TextField focus removed")
                             userInputResult?(contentText)
                         }
 

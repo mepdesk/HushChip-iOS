@@ -141,9 +141,7 @@ struct EditableCardInfoBox: View {
                         }
                         TextField("", text: $editableText, onEditingChanged: {(editingChanged) in
                             if editingChanged {
-                                print("TextField focused")
                             } else {
-                                print("TextField focus removed")
                                 action(.text(editableText))
                                 isEditing = false
                             }

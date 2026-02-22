@@ -1,4 +1,8 @@
 // Copyright (c) 2026 Gridmark Technologies Ltd (HushChip)
+// Based on Seedkeeper-iOS by Toporin / Satochip S.R.L.
+// Licensed under GPL-3.0
+//
+// Copyright (c) 2026 Gridmark Technologies Ltd (HushChip)
 // https://github.com/hushchip/HushChip-iOS
 //
 // This program is free software: you can redistribute it and/or modify

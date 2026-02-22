@@ -19,6 +19,10 @@
 		<key>UIColorName</key>
 		<string>LaunchScreenBackground</string>
 	</dict>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<true/>
+	<key>NFCReaderUsageDescription</key>
+	<string>HushChip uses NFC to communicate with your smart card.</string>
 	<key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
 	<array>
 		<string>A00000080400010101</string>

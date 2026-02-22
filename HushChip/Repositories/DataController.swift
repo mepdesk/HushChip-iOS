@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Gridmark Technologies Ltd (HushChip)
+// Based on Seedkeeper-iOS by Toporin / Satochip S.R.L.
+// Licensed under GPL-3.0
+//
 //
 //  DataController.swift
 //  Seedkeeper
@@ -20,7 +24,6 @@ class DataController: ObservableObject {
         container = NSPersistentContainer(name: "Seedkeeper")
         container.loadPersistentStores { description, error in
             if let error = error {
-                print("Core Data failed to load: \(error.localizedDescription)")
             }
         }
     }
@@ -31,7 +34,6 @@ class DataController: ObservableObject {
             do {
                 try container.viewContext.save()
             } catch {
-                print("An error occurred while saving: \(error.localizedDescription)")
             }
         }
     }

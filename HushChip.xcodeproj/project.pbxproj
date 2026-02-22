@@ -48,7 +48,8 @@
 		D080FD782C261D1E00B50489 /* OptionSelectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D080FD772C261D1E00B50489 /* OptionSelectorView.swift */; };
 		D08722502C19FC2500E0FBE5 /* SKMnemonicHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D087224F2C19FC2500E0FBE5 /* SKMnemonicHelper.swift */; };
 		D08722532C1A02FC00E0FBE5 /* QRCode in Frameworks */ = {isa = PBXBuildFile; productRef = D08722522C1A02FC00E0FBE5 /* QRCode */; };
-		D0BA413E2BCFDDF000FD25B9 /* SeedkeeperApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BA413D2BCFDDF000FD25B9 /* SeedkeeperApp.swift */; };
+		D0BA413E2BCFDDF000FD25B9 /* HushChipApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BA413D2BCFDDF000FD25B9 /* HushChipApp.swift */; };
+		AA20CB020000000200000002 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = AA20CB010000000100000001 /* PrivacyInfo.xcprivacy */; };
 		D0BA41402BCFDDF000FD25B9 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BA413F2BCFDDF000FD25B9 /* HomeView.swift */; };
 		D0BA41422BCFDDF200FD25B9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D0BA41412BCFDDF200FD25B9 /* Assets.xcassets */; };
 		D0BA41452BCFDDF300FD25B9 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D0BA41442BCFDDF300FD25B9 /* Preview Assets.xcassets */; };
@@ -84,9 +85,7 @@
 		D0E433A32BD40B56008DBAA6 /* MenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E433A22BD40B56008DBAA6 /* MenuView.swift */; };
 		D0E433A52BD423B0008DBAA6 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E433A42BD423B0008DBAA6 /* SettingsView.swift */; };
 		D0E433A72BD425AA008DBAA6 /* SKButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E433A62BD425AA008DBAA6 /* SKButton.swift */; };
-		D0F727AD2C2B121900C05DB4 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = D0F727AC2C2B121900C05DB4 /* GoogleService-Info.plist */; };
 		D0F727B02C2B144200C05DB4 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F727AF2C2B144200C05DB4 /* AppDelegate.swift */; };
-		D0F727B22C2B155300C05DB4 /* FirebaseAppCheck in Frameworks */ = {isa = PBXBuildFile; productRef = D0F727B12C2B155300C05DB4 /* FirebaseAppCheck */; };
 		E5DAFFE30C1C47B884ABEC76 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CB38F9386046D5AC64D266 /* SplashView.swift */; };
 /* End PBXBuildFile section */
 
@@ -148,7 +147,8 @@
 		D080FD772C261D1E00B50489 /* OptionSelectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptionSelectorView.swift; sourceTree = "<group>"; };
 		D087224F2C19FC2500E0FBE5 /* SKMnemonicHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SKMnemonicHelper.swift; sourceTree = "<group>"; };
 		D0BA413A2BCFDDF000FD25B9 /* HushChip.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HushChip.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0BA413D2BCFDDF000FD25B9 /* SeedkeeperApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedkeeperApp.swift; sourceTree = "<group>"; };
+		D0BA413D2BCFDDF000FD25B9 /* HushChipApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HushChipApp.swift; sourceTree = "<group>"; };
+		AA20CB010000000100000001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		D0BA413F2BCFDDF000FD25B9 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		D0BA41412BCFDDF200FD25B9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D0BA41442BCFDDF300FD25B9 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
@@ -189,7 +189,6 @@
 		D0E433A22BD40B56008DBAA6 /* MenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuView.swift; sourceTree = "<group>"; };
 		D0E433A42BD423B0008DBAA6 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		D0E433A62BD425AA008DBAA6 /* SKButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SKButton.swift; sourceTree = "<group>"; };
-		D0F727AC2C2B121900C05DB4 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		D0F727AF2C2B144200C05DB4 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -199,7 +198,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				D08722532C1A02FC00E0FBE5 /* QRCode in Frameworks */,
-				D0F727B22C2B155300C05DB4 /* FirebaseAppCheck in Frameworks */,
 				D05EB8492BFE4DEA006B84BB /* SatochipSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -330,13 +328,13 @@
 				D07141552BF2532100A4939A /* Models */,
 				D03110962BE4178D00ED0997 /* Helpers */,
 				D0E4339A2BD3FC31008DBAA6 /* Info.plist */,
+				AA20CB010000000100000001 /* PrivacyInfo.xcprivacy */,
 				D0E433842BD3FBC1008DBAA6 /* Resources */,
 				D0E4337C2BD3F984008DBAA6 /* Components */,
 				D0E4337B2BD3F978008DBAA6 /* Journeys */,
 				D0BA41672BCFE40900FD25B9 /* HushChip.entitlements */,
 				D0F727AF2C2B144200C05DB4 /* AppDelegate.swift */,
-				D0F727AC2C2B121900C05DB4 /* GoogleService-Info.plist */,
-				D0BA413D2BCFDDF000FD25B9 /* SeedkeeperApp.swift */,
+				D0BA413D2BCFDDF000FD25B9 /* HushChipApp.swift */,
 				D0BA41412BCFDDF200FD25B9 /* Assets.xcassets */,
 				D0BA41432BCFDDF300FD25B9 /* Preview Content */,
 			);
@@ -496,7 +494,6 @@
 				D0BA41362BCFDDF000FD25B9 /* Sources */,
 				D0BA41372BCFDDF000FD25B9 /* Frameworks */,
 				D0BA41382BCFDDF000FD25B9 /* Resources */,
-				D0F727B32C2B15B800C05DB4 /* Crashlytics */,
 			);
 			buildRules = (
 			);
@@ -506,7 +503,6 @@
 			packageProductDependencies = (
 				D05EB8482BFE4DEA006B84BB /* SatochipSwift */,
 				D08722522C1A02FC00E0FBE5 /* QRCode */,
-				D0F727B12C2B155300C05DB4 /* FirebaseAppCheck */,
 			);
 			productName = HushChip;
 			productReference = D0BA413A2BCFDDF000FD25B9 /* HushChip.app */;
@@ -584,7 +580,6 @@
 			packageReferences = (
 				D05EB8472BFE4DEA006B84BB /* XCRemoteSwiftPackageReference "SatochipSwift" */,
 				D08722512C1A02FC00E0FBE5 /* XCRemoteSwiftPackageReference "QRCode" */,
-				D0F727AE2C2B143100C05DB4 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			productRefGroup = D0BA413B2BCFDDF000FD25B9 /* Products */;
 			projectDirPath = "";
@@ -603,7 +598,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0E433932BD3FBE8008DBAA6 /* Outfit-Bold.ttf in Resources */,
-				D0F727AD2C2B121900C05DB4 /* GoogleService-Info.plist in Resources */,
+				AA20CB020000000200000002 /* PrivacyInfo.xcprivacy in Resources */,
 				D0BA41452BCFDDF300FD25B9 /* Preview Assets.xcassets in Resources */,
 				D0E433942BD3FBE8008DBAA6 /* OpenSans-SemiBold.ttf in Resources */,
 				D07141682BF26E0200A4939A /* OpenSans-Light.ttf in Resources */,
@@ -639,30 +634,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		D0F727B32C2B15B800C05DB4 /* Crashlytics */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}",
-				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${PRODUCT_NAME}",
-				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Info.plist",
-				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist",
-				"$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)",
-			);
-			name = Crashlytics;
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n";
-		};
-/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		D0BA41362BCFDDF000FD25B9 /* Sources */ = {
@@ -722,7 +693,7 @@
 				D0E4337F2BD3F9FD008DBAA6 /* HeaderView.swift in Sources */,
 				D0D8323D2C20ABD600AE2984 /* CardState+Secrets.swift in Sources */,
 				D03540132C04A3DC00ABF9C7 /* BackupView.swift in Sources */,
-				D0BA413E2BCFDDF000FD25B9 /* SeedkeeperApp.swift in Sources */,
+				D0BA413E2BCFDDF000FD25B9 /* HushChipApp.swift in Sources */,
 				D07141702BF4C0E500A4939A /* AuhenticityView.swift in Sources */,
 				AA00000200000002000000A2 /* AboutView.swift in Sources */,
 				D0C939D22BD6860700F2A17B /* CreatePinCodeView.swift in Sources */,
@@ -1106,14 +1077,6 @@
 				minimumVersion = 20.0.0;
 			};
 		};
-		D0F727AE2C2B143100C05DB4 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 10.28.1;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1126,11 +1089,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D08722512C1A02FC00E0FBE5 /* XCRemoteSwiftPackageReference "QRCode" */;
 			productName = QRCode;
-		};
-		D0F727B12C2B155300C05DB4 /* FirebaseAppCheck */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D0F727AE2C2B143100C05DB4 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseAppCheck;
 		};
 /* End XCSwiftPackageProductDependency section */
 

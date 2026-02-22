@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Gridmark Technologies Ltd (HushChip)
+// Based on Seedkeeper-iOS by Toporin / Satochip S.R.L.
+// Licensed under GPL-3.0
+//
 //
 //  CardState+Secrets.swift
 //  Seedkeeper
@@ -64,10 +68,10 @@ extension CardState {
             session = SatocardController(onConnect: onAddPasswordSecret, onFailure: onDisconnection)
             session?.start(alertMessage: "nfcScanMasterCard")
         default:
-            print("requestAddSecret : No action defined for \(secretType.rawValue)")
+            break
         }
     }
-    
+
     // SECRET_TYPE_PASSWORD (subtype 0x01): [password_size(1b) | password | login_size(1b) | login | url_size(1b) | url]
     private func onManualImportPasswordSecret(cardChannel: CardChannel) -> Void {
         guard let pinForMasterCard = pinForMasterCard else {
@@ -117,10 +121,8 @@ extension CardState {
         session?.stop(alertMessage: String(localized: "nfcSecretAdded"))
     }
     
-    // trigger hidden before fringe cattle height rug blush pause erode shift absent
     // SECRET_TYPE_BIP39_MNEMONIC: [mnemonic_size(1b) | mnemonic | passphrase_size(1b) | passphrase ]
     private func onManualImportMnemonicSecret(cardChannel: CardChannel) -> Void {
-        print("onAddMnemonicSecret")
         guard let pinForMasterCard = pinForMasterCard else {
             session?.stop(errorMessage: String(localized: "nfcPinCodeIsNotDefined"))
             // homeNavigationPath.append(NavigationRoutes.pinCode(.rescanCard))
@@ -181,13 +183,12 @@ extension CardState {
             session = SatocardController(onConnect: onAddPasswordSecret, onFailure: onDisconnection)
             session?.start(alertMessage: "nfcScanMasterCard")
         default:
-            print("requestAddSecret : No action defined for \(secretType.rawValue)")
+            break
         }
     }
-    
+
     // SECRET_TYPE_BIP39_MNEMONIC: [mnemonic_size(1b) | mnemonic | passphrase_size(1b) | passphrase ]
     private func onAddMnemonicSecret(cardChannel: CardChannel) -> Void {
-        print("onAddMnemonicSecret")
         guard let pinForMasterCard = pinForMasterCard else {
             session?.stop(errorMessage: String(localized: "nfcPinCodeIsNotDefined"))
             // homeNavigationPath.append(NavigationRoutes.pinCode(.rescanCard))
@@ -311,7 +312,6 @@ extension CardState {
             var result = try cmdSet.seedkeeperExportSecret(sid: currentSecretHeader.sid)
             DispatchQueue.main.async { self.currentSecretObject = result }
             session?.stop(alertMessage: "Secret fetched")
-            print("seedkeeperExportSecret : \(result)")
         } catch let error {
             logEvent(log: LogModel(type: .error, message: "onGetSecret : \(error.localizedDescription)"))
             session?.stop(errorMessage: friendlyError(error.localizedDescription))
@@ -348,7 +348,6 @@ extension CardState {
             let headers = secrets.map { SeedkeeperSecretHeaderDto(secretHeader: $0) }
             DispatchQueue.main.async { self.masterSecretHeaders = headers }
             session?.stop(alertMessage: String(localized: "nfcSecretsListSuccess"))
-            print("Secrets: \(secrets)")
         } catch let error {
             logEvent(log: LogModel(type: .error, message: "onFetchSecrets : \(error.localizedDescription)"))
             session?.stop(errorMessage: friendlyError(error.localizedDescription))

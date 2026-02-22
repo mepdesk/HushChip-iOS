@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Gridmark Technologies Ltd (HushChip)
+// Based on Seedkeeper-iOS by Toporin / Satochip S.R.L.
+// Licensed under GPL-3.0
+//
 //
 //  CardState+Pin.swift
 //  Seedkeeper
@@ -39,11 +43,9 @@ extension CardState {
                 
         do {
             var rapdu = try cmdSet.cardChangePIN(oldPin: pinBytes, newPin: pinBytesNew)
-            print("Pin Updated")
             DispatchQueue.main.async { self.homeNavigationPath.removeLast() }
             session?.stop(alertMessage: String(localized: "nfcPinCodeUpdateSuccess"))
         } catch let error {
-            print("Error: \(error)")
             logEvent(log: LogModel(type: .error, message: "onUpdatePinCode : \(error.localizedDescription)"))
             session?.stop(alertMessage: String(localized: "nfcPinCodeUpdateFailed"))
         }
@@ -71,13 +73,11 @@ extension CardState {
         
         do {
             rapdu = try cmdSet.cardSetup(pin_tries0: 5, pin0: pinBytes)
-            print("Pin Set")
             let (_, _, authentikeyHex) = try cmdSet.cardGetAuthentikey()
             session?.stop(alertMessage: String(localized: "nfcPinCodeSetSuccess"))
             DispatchQueue.main.async { self.homeNavigationPath = .init() }
             // homeNavigationPath.append(NavigationRoutes.setupFaceId(pin))
         } catch let error {
-            print("Error: \(error)")
             session?.stop(alertMessage: String(localized: "nfcPinCodeSetFailed"))
         }
         
@@ -106,11 +106,9 @@ extension CardState {
         
         do {
             rapdu = try cmdSet.cardSetup(pin_tries0: 5, pin0: pinBytes)
-            print("Pin Set")
             session?.stop(alertMessage: String(localized: "nfcPinCodeSetSuccess"))
             DispatchQueue.main.async { self.popToBackupFlow() }
         } catch let error {
-            print("Error: \(error)")
             session?.stop(alertMessage: String(localized: "nfcPinCodeSetFailed"))
         }
 

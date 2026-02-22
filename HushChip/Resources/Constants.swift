@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Gridmark Technologies Ltd (HushChip)
+// Based on Seedkeeper-iOS by Toporin / Satochip S.R.L.
+// Licensed under GPL-3.0
+//
 //
 //  Constants.swift
 //  Seedkeeper

@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Gridmark Technologies Ltd (HushChip)
+// Based on Seedkeeper-iOS by Toporin / Satochip S.R.L.
+// Licensed under GPL-3.0
+//
 //
 //  CardState+Backup.swift
 //  Seedkeeper
@@ -88,7 +92,6 @@ extension CardState {
             
             self.secretsForBackup = fetchedSecretsFromCard
             
-            print("secretsToImport : \(fetchedSecretsFromCard)")
             DispatchQueue.main.async { self.mode = .backupExport }
             session?.stop(alertMessage: String(localized: "nfcSecretsListSuccess"))
         } catch let error {
@@ -104,7 +107,6 @@ extension CardState {
     // MARK: - Backup card - connection
     // *********************************************************
     func scanBackupCard() {
-        print("CardState scan()")
         DispatchQueue.main.async {
             self.resetStateForBackupCard()
         }

@@ -160,7 +160,6 @@ struct GenerateGeneratorView: View {
             let mnemonic = try Mnemonic.generateMnemonic(strength: mnemonicSize)
             return mnemonic
         } catch {
-            print("Error generating mnemonic: \(error)")
         }
         return nil
     }

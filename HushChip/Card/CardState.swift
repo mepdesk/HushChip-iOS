@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Gridmark Technologies Ltd (HushChip)
+// Based on Seedkeeper-iOS by Toporin / Satochip S.R.L.
+// Licensed under GPL-3.0
+//
 //
 //  CardData.swift
 //  Satodime
@@ -104,9 +108,7 @@ class CardState: ObservableObject {
     // MARK: - Master card connection
     // *********************************************************
     func scan() {
-        print("CardState scan()")
         guard !isSessionActive else {
-            print("CardState scan() — session already active, ignoring")
             return
         }
         isSessionActive = true
@@ -215,7 +217,6 @@ class CardState: ObservableObject {
                 self.masterSecretHeaders = headers
                 self.cardLabel = label
             }
-            print("Secrets: \(secrets)")
         } catch let error {
             logEvent(log: LogModel(type: .error, message: "onConnection : \(error.localizedDescription)"))
             session?.stop(errorMessage: friendlyError(error.localizedDescription))

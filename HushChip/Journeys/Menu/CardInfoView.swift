@@ -75,7 +75,6 @@ struct CardInfoView: View {
                 EditableCardInfoBox(mode: .text(self.cardState.cardLabel), backgroundColor: Color.hcBgSurface) { result in
                     switch result {
                     case .text(let value):
-                        print("Edited text : \(value)")
                         self.cardState.requestSetCardLabel(label: value)
                     default:
                         break

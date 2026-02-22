@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Gridmark Technologies Ltd (HushChip)
+// Based on Seedkeeper-iOS by Toporin / Satochip S.R.L.
+// Licensed under GPL-3.0
+//
 //
 //  KeychainHelper.swift
 //  Seedkeeper
@@ -22,7 +26,6 @@ class KeychainHelper {
         
         let status = SecItemAdd(query as CFDictionary, nil)
         if status != errSecSuccess {
-            print("Error saving to keychain: \(status)")
         }
     }
     
@@ -39,7 +42,6 @@ class KeychainHelper {
             let data = dataTypeRef as! Data
             return String(data: data, encoding: .utf8)
         } else {
-            print("Error loading from keychain: \(status)")
             return nil
         }
     }
@@ -50,7 +52,6 @@ class KeychainHelper {
         
         let status = SecItemDelete(query as CFDictionary)
         if status != errSecSuccess {
-            print("Error deleting from keychain: \(status)")
         }
     }
     
@@ -59,7 +60,6 @@ class KeychainHelper {
         
         let status = SecItemDelete(query as CFDictionary)
         if status != errSecSuccess {
-            print("Error clearing keychain: \(status)")
         }
     }
     

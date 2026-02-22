@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Gridmark Technologies Ltd (HushChip)
+// Based on Seedkeeper-iOS by Toporin / Satochip S.R.L.
+// Licensed under GPL-3.0
+//
 //
 //  CardState+Helpers.swift
 //  Seedkeeper
@@ -123,13 +127,11 @@ extension CardState {
         let passwordSize = Int(bytes[index])
         index += 1
         guard index + passwordSize <= bytes.count else {
-            print("Invalid password size")
             return nil
         }
         let passwordBytes = Array(bytes[index..<(index + passwordSize)])
         index += passwordSize
         guard let password = String(bytes: passwordBytes, encoding: .utf8) else {
-            print("Failed to convert password bytes to string")
             return nil
         }
 
@@ -167,13 +169,11 @@ extension CardState {
         let mnemonicSize = Int(bytes[index])
         index += 1
         guard index + mnemonicSize <= bytes.count else {
-            print("Invalid mnemonic size")
             return nil
         }
         let mnemonicBytes = Array(bytes[index..<(index + mnemonicSize)])
         index += mnemonicSize
         guard let mnemonic = String(bytes: mnemonicBytes, encoding: .utf8) else {
-            print("Failed to convert mnemonic bytes to string")
             return nil
         }
 

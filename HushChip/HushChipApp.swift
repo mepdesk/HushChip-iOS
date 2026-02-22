@@ -1,6 +1,10 @@
+// Copyright (c) 2026 Gridmark Technologies Ltd (HushChip)
+// Based on Seedkeeper-iOS by Toporin / Satochip S.R.L.
+// Licensed under GPL-3.0
 //
-//  SeedkeeperApp.swift
-//  Seedkeeper
+//
+//  HushChipApp.swift
+//  HushChip
 //
 //  Created by Lionel Delvaux on 17/04/2024.
 //
@@ -42,9 +46,4 @@ struct HushChipApp: App {
             }
         }
     }
-}
-
-class NavigationPathSingleton {
-    static let shared = NavigationPathSingleton()
-    var path: NavigationPath = NavigationPath()
 }

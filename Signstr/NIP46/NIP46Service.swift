@@ -35,6 +35,10 @@ final class NIP46Service: ObservableObject {
     /// Active WebSocket connections per relay URL.
     private var relayConnections: [String: URLSessionWebSocketTask] = [:]
 
+    /// Tracks sent EVENT IDs awaiting OK confirmation, keyed by event ID.
+    /// Value is (relayURL, sentTime). Entries are cleared on OK receipt or after timeout.
+    private var pendingOKs: [String: (relayURL: String, sentAt: Date)] = [:]
+
     /// The signer's hex-encoded public key (for filtering incoming events).
     private var signerPubkeyHex: String?
 
@@ -265,13 +269,22 @@ final class NIP46Service: ObservableObject {
             return
         }
 
-        // Log all relay messages (OK, EOSE, NOTICE, EVENT, etc.)
+        // Log all relay messages (OK, EOSE, NOTICE, AUTH, EVENT, etc.)
         switch messageType {
         case "OK":
             let eventId = (array.count > 1 ? array[1] as? String : nil) ?? "?"
             let accepted = (array.count > 2 ? array[2] as? Bool : nil) ?? false
             let reason = (array.count > 3 ? array[3] as? String : nil) ?? ""
             print("[NIP46] ← OK from \(relayURL): event=\(eventId.prefix(16))... accepted=\(accepted) \(reason)")
+            // Clear pending OK tracker
+            pendingOKs.removeValue(forKey: eventId)
+            return
+        case "AUTH":
+            let challenge = (array.count > 1 ? array[1] as? String : nil) ?? ""
+            print("[NIP46] ← AUTH from \(relayURL): challenge=\(challenge)")
+            if !challenge.isEmpty {
+                handleAuthChallenge(challenge, relayURL: relayURL)
+            }
             return
         case "EOSE":
             let subId = (array.count > 1 ? array[1] as? String : nil) ?? "?"
@@ -738,9 +751,87 @@ final class NIP46Service: ObservableObject {
         if let task = relayConnections[relayURL] {
             try await task.send(.string(message))
             print("[NIP46] ✓ EVENT sent to \(relayURL)")
+            // Track for OK timeout
+            trackPendingOK(eventId: eventIdHex, relayURL: relayURL)
         } else {
             print("[NIP46] ⚠ No WebSocket connection for \(relayURL)")
             print("[NIP46]   Active connections: \(relayConnections.keys.joined(separator: ", "))")
+        }
+    }
+
+    // MARK: - NIP-42 AUTH
+
+    /// Handles a NIP-42 AUTH challenge from a relay by signing a kind 22242 event.
+    private func handleAuthChallenge(_ challenge: String, relayURL: String) {
+        guard let signerPubkey = signerPubkeyHex,
+              let privKey = signerPrivateKey else {
+            print("[NIP46] ⚠ Cannot respond to AUTH — missing signer key")
+            return
+        }
+
+        Task {
+            do {
+                // Build kind 22242 auth event per NIP-42
+                let unsigned = NostrEvent.unsigned(
+                    pubkey: signerPubkey,
+                    kind: 22242,
+                    tags: [
+                        ["relay", relayURL],
+                        ["challenge", challenge]
+                    ],
+                    content: ""
+                )
+
+                // Compute ID and sign
+                let eventIdData = NostrEventSerializer.computeEventId(for: unsigned)
+                let eventIdHex = NostrKeyUtils.hexEncode(eventIdData)
+                let sigData = try SchnorrSigner.sign(hash: eventIdData, privateKey: privKey)
+                let sigHex = NostrKeyUtils.hexEncode(sigData)
+                let signed = unsigned.signed(id: eventIdHex, sig: sigHex)
+
+                // Encode and send ["AUTH", <signed_event>]
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = .sortedKeys
+                let eventJSON = try encoder.encode(signed)
+                guard let eventString = String(data: eventJSON, encoding: .utf8) else {
+                    print("[NIP46] ⚠ Failed to encode AUTH event")
+                    return
+                }
+
+                let message = "[\"AUTH\",\(eventString)]"
+                print("[NIP46] → AUTH response to \(relayURL)")
+                print("[NIP46]   Event ID: \(eventIdHex.prefix(16))...")
+
+                if let task = relayConnections[relayURL] {
+                    try await task.send(.string(message))
+                    print("[NIP46] ✓ AUTH response sent to \(relayURL)")
+
+                    // Re-send subscription after authenticating
+                    print("[NIP46]   Re-sending subscription after AUTH...")
+                    sendSubscription(to: task, relayURL: relayURL)
+                } else {
+                    print("[NIP46] ⚠ No WebSocket connection for AUTH to \(relayURL)")
+                }
+            } catch {
+                print("[NIP46] ✗ AUTH response failed: \(error)")
+            }
+        }
+    }
+
+    // MARK: - OK timeout tracking
+
+    /// Registers a sent event ID for OK timeout tracking.
+    /// Starts a 5-second delayed check; if no OK arrives, logs a warning.
+    private func trackPendingOK(eventId: String, relayURL: String) {
+        pendingOKs[eventId] = (relayURL: relayURL, sentAt: Date())
+
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
+            guard let self else { return }
+            if let pending = self.pendingOKs[eventId] {
+                print("[NIP46] ⚠ WARNING: No OK received from \(pending.relayURL) within 5s for event \(eventId.prefix(16))... — event may have been dropped")
+                self.pendingOKs.removeValue(forKey: eventId)
+            }
         }
     }
 

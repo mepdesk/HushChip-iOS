@@ -129,14 +129,24 @@ final class NIP46Service: ObservableObject {
                     )
                     print("[NIP46]   Encrypted with NIP-44: \(encrypted.prefix(60))...")
 
-                    for relayURL in relays {
-                        print("[NIP46] → Connect response to \(relayURL)...")
+                    // Build relay list with fallback
+                    let fallbackRelay = "wss://relay.damus.io"
+                    var sendRelays = relays
+                    if !sendRelays.contains(fallbackRelay) {
+                        sendRelays.append(fallbackRelay)
+                        print("[NIP46]   Adding fallback relay: \(fallbackRelay)")
+                        self.subscribeToRelay(fallbackRelay)
+                    }
+
+                    for relayURL in sendRelays {
+                        let isFallback = !relays.contains(relayURL)
+                        print("[NIP46] → Connect response to \(relayURL)\(isFallback ? " (fallback)" : "")...")
                         try await sendResponse(
                             encryptedContent: encrypted,
                             toClientPubkey: clientPubkey,
                             relayURL: relayURL
                         )
-                        print("[NIP46] ✓ Connect response sent to \(relayURL)")
+                        print("[NIP46] ✓ Connect response sent to \(relayURL)\(isFallback ? " (fallback)" : "")")
                     }
                 } catch {
                     print("[NIP46] ✗ Failed to send connect response: \(error)")

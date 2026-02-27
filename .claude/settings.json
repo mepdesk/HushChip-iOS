@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add -A Signstr/ Signstr.xcodeproj/ SignstrTests/ SignstrUITests/ signstr-app-icon.svg README.md generate_icon.swift SIGNSTR_IOS_SPINE.md)",
+      "Bash(git add -A HushChip/ HushChip.xcodeproj/ HushChipTests/ HushChipUITests/ hushchip-app-icon.svg HUSHCHIP_IOS_SPINE.md)",
+      "Bash(git add -A)"
+    ],
+    "additionalDirectories": [
+      "/Users/ron/signstr-iOS/Signstr-iOS/HushChip",
+      "/Users/ron/signstr-iOS/Signstr-iOS"
+    ]
+  }
+}

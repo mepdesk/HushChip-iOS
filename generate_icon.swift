@@ -1,5 +1,5 @@
 #!/usr/bin/env swift
-// generate_icon.swift — generates HushChip 1024x1024 app icon
+// generate_icon.swift — generates Signstr 1024x1024 app icon
 // Run: swift generate_icon.swift
 
 import AppKit
@@ -20,7 +20,7 @@ func hex(_ h: UInt32, alpha: CGFloat = 1.0) -> NSColor {
 let scriptDir = URL(fileURLWithPath: CommandLine.arguments[0])
     .deletingLastPathComponent()
 let fontURL = scriptDir
-    .appendingPathComponent("HushChip/Resources/Fonts/Outfit-ExtraLight.ttf")
+    .appendingPathComponent("Signstr/Resources/Fonts/Outfit-ExtraLight.ttf")
 
 var fontError: Unmanaged<CFError>?
 CTFontManagerRegisterFontsForURL(fontURL as CFURL, .process, &fontError)
@@ -173,7 +173,7 @@ guard let tiff = image.tiffRepresentation,
 }
 
 let outURL = scriptDir
-    .appendingPathComponent("HushChip/Assets.xcassets/AppIcon.appiconset/AppIcon.png")
+    .appendingPathComponent("Signstr/Assets.xcassets/AppIcon.appiconset/AppIcon.png")
 do {
     try png.write(to: outURL)
     print("✓ AppIcon.png written to \(outURL.path)")

@@ -85,7 +85,43 @@ final class NIP46Service: ObservableObject {
             subscribeToRelay(relayURL)
         }
 
-        print("[NIP46] ── Connection added, waiting for client requests ──")
+        // For client-initiated flow (nostrconnect://), send connect response
+        // immediately so the client knows the signer is ready.
+        if connectionInfo.flow == .clientInitiated {
+            let secret = connectionInfo.secret ?? ""
+            let clientPubkey = session.clientPubkey
+            let convKey = session.conversationKey
+            let relays = session.relays
+
+            print("[NIP46] Client-initiated flow — sending connect response (secret=\(secret.isEmpty ? "empty" : secret.prefix(8) + "..."))")
+
+            Task {
+                do {
+                    let response = NIP46Response.success(
+                        id: UUID().uuidString,
+                        result: secret
+                    )
+                    let encrypted = try NIP46MessageHandler.encryptResponse(
+                        response,
+                        conversationKey: convKey
+                    )
+
+                    for relayURL in relays {
+                        print("[NIP46] → Connect response to \(relayURL)...")
+                        try await sendResponse(
+                            encryptedContent: encrypted,
+                            toClientPubkey: clientPubkey,
+                            relayURL: relayURL
+                        )
+                        print("[NIP46] ✓ Connect response sent to \(relayURL)")
+                    }
+                } catch {
+                    print("[NIP46] ✗ Failed to send connect response: \(error)")
+                }
+            }
+        }
+
+        print("[NIP46] ── Connection added, listening for client requests ──")
         return session
     }
 

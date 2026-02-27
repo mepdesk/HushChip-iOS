@@ -262,7 +262,7 @@ struct ImportNsecView: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 Button(action: {
-                    ClipboardManager.shared.copy(npub)
+                    UIPasteboard.general.string = npub
                 }) {
                     HStack(spacing: 6) {
                         Image(systemName: "doc.on.doc")

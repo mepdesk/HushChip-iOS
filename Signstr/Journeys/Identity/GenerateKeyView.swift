@@ -174,7 +174,7 @@ struct GenerateKeyView: View {
 
                 // Copy button
                 Button(action: {
-                    ClipboardManager.shared.copy(npub)
+                    UIPasteboard.general.string = npub
                 }) {
                     HStack(spacing: 6) {
                         Image(systemName: "doc.on.doc")

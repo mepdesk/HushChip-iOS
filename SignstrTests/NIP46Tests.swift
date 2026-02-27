@@ -151,6 +151,106 @@ final class NIP46Tests: XCTestCase {
         XCTAssertEqual(unpadded, data)
     }
 
+    // MARK: - NIP-44 Spec Test Vectors
+
+    /// Verify conversation key derivation against the official NIP-44 test vectors.
+    /// These use HKDF-extract only: HMAC-SHA256(key="nip44-v2", data=ecdh_shared_x).
+    func testNIP44ConversationKeySpecVectors() throws {
+        // Vector 1 from nip44.vectors.json v2.valid.get_conversation_key
+        let sec1_1 = try NostrKeyUtils.hexDecode("315e59ff51cb9209768cf7da80791ddcaae56ac9775eb25b6dee1234bc5d2268")
+        let pub2_1 = try NostrKeyUtils.hexDecode("c2f9d9948dc8c7c38321e4b85c8558872eafa0641cd269db76848a6073e69133")
+        let expected1 = "3dfef0ce2a4d80a25e7a328accf73448ef67096f65f79588e358d9a0eb9013f1"
+
+        let ck1 = try NIP44.conversationKey(privateKey: sec1_1, publicKey: pub2_1)
+        let ck1Hex = ck1.withUnsafeBytes { Data($0).map { String(format: "%02x", $0) }.joined() }
+        XCTAssertEqual(ck1Hex, expected1, "Conversation key vector 1 mismatch")
+
+        // Vector 2
+        let sec1_2 = try NostrKeyUtils.hexDecode("a1e37752c9fdc1273be53f68c5f74be7c8905728e8de75800b94262f9497c86e")
+        let pub2_2 = try NostrKeyUtils.hexDecode("03bb7947065dde12ba991ea045132581d0954f042c84e06d8c00066e23c1a800")
+        let expected2 = "4d14f36e81b8452128da64fe6f1eae873baae2f444b02c950b90e43553f2178b"
+
+        let ck2 = try NIP44.conversationKey(privateKey: sec1_2, publicKey: pub2_2)
+        let ck2Hex = ck2.withUnsafeBytes { Data($0).map { String(format: "%02x", $0) }.joined() }
+        XCTAssertEqual(ck2Hex, expected2, "Conversation key vector 2 mismatch")
+
+        // Vector 3
+        let sec1_3 = try NostrKeyUtils.hexDecode("98a5902fd67518a0c900f0fb62158f278f94a21d6f9d33d30cd3091195500311")
+        let pub2_3 = try NostrKeyUtils.hexDecode("aae65c15f98e5e677b5050de82e3aba47a6fe49b3dab7863cf35d9478ba9f7d1")
+        let expected3 = "9c00b769d5f54d02bf175b7284a1cbd28b6911b06cda6666b2243561ac96bad7"
+
+        let ck3 = try NIP44.conversationKey(privateKey: sec1_3, publicKey: pub2_3)
+        let ck3Hex = ck3.withUnsafeBytes { Data($0).map { String(format: "%02x", $0) }.joined() }
+        XCTAssertEqual(ck3Hex, expected3, "Conversation key vector 3 mismatch")
+    }
+
+    /// Verify message key derivation against the official NIP-44 test vectors.
+    /// Uses HKDF-expand: PRK=conversation_key, info=nonce, L=76.
+    func testNIP44MessageKeySpecVectors() throws {
+        let convKeyHex = "a1a3d60f3470a8612633924e91febf96dc5366ce130f658b1f0fc652c20b3b54"
+        let convKeyData = try NostrKeyUtils.hexDecode(convKeyHex)
+        let convKey = SymmetricKey(data: convKeyData)
+
+        // Vector 1
+        let nonce1 = try NostrKeyUtils.hexDecode("e1e6f880560d6d149ed83dcc7e5861ee62a5ee051f7fde9975fe5d25d2a02d72")
+        let expectedChachaKey1 = "f145f3bed47cb70dbeaac07f3a3fe683e822b3715edb7c4fe310829014ce7d76"
+        let expectedChachaNonce1 = "c4ad129bb01180c0933a160c"
+        let expectedHmacKey1 = "027c1db445f05e2eee864a0975b0ddef5b7110583c8c192de3732571ca5838c4"
+
+        let (ck1, cn1, hk1) = NIP44.testDeriveMessageKeys(conversationKey: convKey, nonce: nonce1)
+        XCTAssertEqual(ck1.map { String(format: "%02x", $0) }.joined(), expectedChachaKey1, "ChaCha key vector 1")
+        XCTAssertEqual(cn1.map { String(format: "%02x", $0) }.joined(), expectedChachaNonce1, "ChaCha nonce vector 1")
+        XCTAssertEqual(hk1.map { String(format: "%02x", $0) }.joined(), expectedHmacKey1, "HMAC key vector 1")
+
+        // Vector 2
+        let nonce2 = try NostrKeyUtils.hexDecode("e1d6d28c46de60168b43d79dacc519698512ec35e8ccb12640fc8e9f26121101")
+        let expectedChachaKey2 = "e35b88f8d4a8f1606c5082f7a64b100e5d85fcdb2e62aeafbec03fb9e860ad92"
+        let expectedChachaNonce2 = "22925e920cee4a50a478be90"
+        let expectedHmacKey2 = "46a7c55d4283cb0df1d5e29540be67abfe709e3b2e14b7bf9976e6df994ded30"
+
+        let (ck2, cn2, hk2) = NIP44.testDeriveMessageKeys(conversationKey: convKey, nonce: nonce2)
+        XCTAssertEqual(ck2.map { String(format: "%02x", $0) }.joined(), expectedChachaKey2, "ChaCha key vector 2")
+        XCTAssertEqual(cn2.map { String(format: "%02x", $0) }.joined(), expectedChachaNonce2, "ChaCha nonce vector 2")
+        XCTAssertEqual(hk2.map { String(format: "%02x", $0) }.joined(), expectedHmacKey2, "HMAC key vector 2")
+    }
+
+    /// Verify full encrypt/decrypt against the official NIP-44 test vectors.
+    /// Uses sec1=0x01, sec2=0x02 with known nonce, verifies exact payload.
+    func testNIP44EncryptDecryptSpecVectors() throws {
+        // sec1 = 1, sec2 = 2 → known conversation key
+        let sec1 = try NostrKeyUtils.hexDecode("0000000000000000000000000000000000000000000000000000000000000001")
+        let sec2 = try NostrKeyUtils.hexDecode("0000000000000000000000000000000000000000000000000000000000000002")
+        let pub2 = try SchnorrSigner.derivePublicKey(from: sec2)
+
+        let convKey = try NIP44.conversationKey(privateKey: sec1, publicKey: pub2)
+        let convKeyHex = convKey.withUnsafeBytes { Data($0).map { String(format: "%02x", $0) }.joined() }
+        XCTAssertEqual(convKeyHex, "c41c775356fd92eadc63ff5a0dc1da211b268cbea22316767095b2871ea1412d",
+                       "Conversation key for sec1=1, sec2=2")
+
+        // Encrypt with known nonce and verify exact payload
+        let nonce = try NostrKeyUtils.hexDecode("0000000000000000000000000000000000000000000000000000000000000001")
+        let plaintext = "a"
+        let expectedPayload = "AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABee0G5VSK0/9YypIObAtDKfYEAjD35uVkHyB0F4DwrcNaCXlCWZKaArsGrY6M9wnuTMxWfp1RTN9Xga8no+kF5Vsb"
+
+        let encrypted = try NIP44.encrypt(plaintext: plaintext, conversationKey: convKey, nonce: nonce)
+        XCTAssertEqual(encrypted, expectedPayload, "Encrypted payload must match spec vector exactly")
+
+        // Decrypt the spec payload
+        let decrypted = try NIP44.decrypt(payload: expectedPayload, conversationKey: convKey)
+        XCTAssertEqual(decrypted, plaintext, "Decrypted text must match original")
+
+        // Vector 2: sec1=2, sec2=1 (same conversation key), emoji plaintext
+        let nonce2 = try NostrKeyUtils.hexDecode("f00000000000000000000000000000f00000000000000000000000000000000f")
+        let plaintext2 = "🍕🫃"
+        let expectedPayload2 = "AvAAAAAAAAAAAAAAAAAAAPAAAAAAAAAAAAAAAAAAAAAPSKSK6is9ngkX2+cSq85Th16oRTISAOfhStnixqZziKMDvB0QQzgFZdjLTPicCJaV8nDITO+QfaQ61+KbWQIOO2Yj"
+
+        let encrypted2 = try NIP44.encrypt(plaintext: plaintext2, conversationKey: convKey, nonce: nonce2)
+        XCTAssertEqual(encrypted2, expectedPayload2, "Encrypted emoji payload must match spec vector")
+
+        let decrypted2 = try NIP44.decrypt(payload: expectedPayload2, conversationKey: convKey)
+        XCTAssertEqual(decrypted2, plaintext2, "Decrypted emoji text must match original")
+    }
+
     // MARK: - NIP-46 URI Parsing
 
     func testParseNostrConnectURI() throws {

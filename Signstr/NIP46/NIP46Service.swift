@@ -95,18 +95,15 @@ final class NIP46Service: ObservableObject {
 
         // For client-initiated flow (nostrconnect://), send connect response
         // immediately so the client knows the signer is ready.
-        // Uses NIP-04 only — dual NIP-04+NIP-44 sends confused clients (the
-        // undecryptable NIP-44 event caused them to abort the connection).
+        // Uses NIP-44 per current NIP-46 spec (all modern clients use nostr-tools
+        // which decrypts with NIP-44 only).
         if connectionInfo.flow == .clientInitiated {
             let secret = connectionInfo.secret ?? ""
             let clientPubkey = session.clientPubkey
             let relays = session.relays
-            guard let privKey = self.signerPrivateKey else {
-                print("[NIP46] ⚠ Cannot send connect response — no private key")
-                return session
-            }
+            let convKey = session.conversationKey
 
-            print("[NIP46] Client-initiated flow — sending connect response (NIP-04)")
+            print("[NIP46] Client-initiated flow — sending connect response (NIP-44)")
             print("[NIP46]   Secret: \(secret.isEmpty ? "empty" : String(secret.prefix(8)) + "...")")
 
             Task {
@@ -133,17 +130,15 @@ final class NIP46Service: ObservableObject {
                     }
                     print("[NIP46]   Connect response JSON: \(jsonString)")
 
-                    let clientPubkeyData = try NostrKeyUtils.hexDecode(clientPubkey)
-                    let encrypted = try NIP04.encrypt(
+                    let encrypted = try NIP44.encrypt(
                         plaintext: jsonString,
-                        privateKey: privKey,
-                        publicKey: clientPubkeyData
+                        conversationKey: convKey
                     )
-                    print("[NIP46]   Encrypted with NIP-04: \(encrypted.prefix(60))...")
+                    print("[NIP46]   Encrypted with NIP-44: \(encrypted.prefix(60))...")
 
                     for relayURL in sendRelays {
                         let isFallback = !relays.contains(relayURL)
-                        print("[NIP46] → Connect response (NIP-04) to \(relayURL)\(isFallback ? " (fallback)" : "")...")
+                        print("[NIP46] → Connect response (NIP-44) to \(relayURL)\(isFallback ? " (fallback)" : "")...")
                         try await sendResponse(
                             encryptedContent: encrypted,
                             toClientPubkey: clientPubkey,

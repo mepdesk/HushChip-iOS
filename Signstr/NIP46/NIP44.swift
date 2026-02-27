@@ -20,10 +20,11 @@ import P256K
 ///
 /// Steps:
 ///   1. ECDH shared secret (secp256k1) → 32-byte x-only point
-///   2. HKDF-SHA256(ikm: shared_secret, salt: nonce, info: "nip44-v2") → 76 bytes
-///      → conversation_key (bytes 0..<32), chacha_key (bytes 0..<32), chacha_nonce (bytes 32..<44), hmac_key (bytes 44..<76)
-///   3. Encrypt plaintext (with NIP-44 padding) using ChaCha20 (raw, NOT AEAD)
-///   4. HMAC-SHA256(key: hmac_key, data: nonce + padded_ciphertext)
+///   2. Conversation key: HKDF-extract(IKM=shared_x, salt="nip44-v2") → 32 bytes
+///   3. Message keys: HKDF-expand(PRK=conversation_key, info=nonce, L=76)
+///      → chacha_key (bytes 0..<32), chacha_nonce (bytes 32..<44), hmac_key (bytes 44..<76)
+///   4. Encrypt plaintext (with NIP-44 padding) using ChaCha20 (raw, NOT AEAD)
+///   5. HMAC-SHA256(key: hmac_key, data: nonce + padded_ciphertext)
 ///
 /// NIP-44 uses **plain ChaCha20** (not ChaCha20-Poly1305 AEAD), plus a separate HMAC-SHA256 MAC.
 enum NIP44 {
@@ -51,19 +52,21 @@ enum NIP44 {
     // MARK: - Conversation key
 
     /// Derives the NIP-44 conversation key from our private key and their public key.
-    /// This is a stable per-pair key: HKDF-SHA256(ikm: ecdh_x, salt: "nip44-v2", info: "").
+    /// This is a stable per-pair key: HKDF-extract(IKM=ecdh_x, salt="nip44-v2") → 32 bytes.
     static func conversationKey(privateKey: Data, publicKey: Data) throws -> SymmetricKey {
         let sharedPoint = try ecdhSharedSecret(privateKey: privateKey, publicKey: publicKey)
-        // NIP-44 conversation key: HKDF-extract then expand
-        // salt = "nip44-v2", ikm = shared_x, info = empty, L = 32
-        let salt = Data("nip44-v2".utf8)
-        let hkdfKey = HKDF<CryptoKit.SHA256>.deriveKey(
-            inputKeyMaterial: SymmetricKey(data: sharedPoint),
-            salt: salt,
-            info: Data(),
-            outputByteCount: 32
+        return conversationKeyFromSharedSecret(sharedPoint)
+    }
+
+    /// Derives conversation key from a raw 32-byte ECDH shared secret.
+    /// Uses HKDF-extract only (NOT expand): HMAC-SHA256(key=salt, data=IKM).
+    static func conversationKeyFromSharedSecret(_ sharedSecret: Data) -> SymmetricKey {
+        let salt = SymmetricKey(data: Data("nip44-v2".utf8))
+        let prk = HMAC<CryptoKit.SHA256>.authenticationCode(
+            for: sharedSecret,
+            using: salt
         )
-        return hkdfKey
+        return SymmetricKey(data: Data(prk))
     }
 
     // MARK: - Encrypt
@@ -198,25 +201,39 @@ enum NIP44 {
     // MARK: - Key derivation
 
     /// Derives chacha_key (32), chacha_nonce (12), hmac_key (32) from conversation key + nonce.
+    /// Uses HKDF-expand: PRK=conversation_key, info=nonce, L=76.
     private static func deriveMessageKeys(
         conversationKey: SymmetricKey,
         nonce: Data
     ) -> (chachaKey: Data, chachaNonce: Data, hmacKey: Data) {
-        // HKDF-expand with salt=conversation_key, ikm=nonce, info="nip44-v2"
-        // Output: 76 bytes → chacha_key(32) + chacha_nonce(12) + hmac_key(32)
-        let expanded = HKDF<CryptoKit.SHA256>.deriveKey(
-            inputKeyMaterial: SymmetricKey(data: nonce),
-            salt: conversationKey.withUnsafeBytes { Data($0) },
-            info: Data("nip44-v2".utf8),
-            outputByteCount: 76
-        )
-
-        let expandedBytes = expanded.withUnsafeBytes { Data($0) }
+        let expandedBytes = hkdfExpand(prk: conversationKey, info: nonce, outputByteCount: 76)
         let chachaKey = expandedBytes[0..<32]
         let chachaNonce = expandedBytes[32..<44]
         let hmacKey = expandedBytes[44..<76]
 
         return (Data(chachaKey), Data(chachaNonce), Data(hmacKey))
+    }
+
+    /// HKDF-expand (RFC 5869 §2.3) — expands a PRK into output keying material.
+    /// T(1) = HMAC(PRK, info || 0x01)
+    /// T(N) = HMAC(PRK, T(N-1) || info || N)
+    /// Output = T(1) || T(2) || ... truncated to outputByteCount
+    private static func hkdfExpand(prk: SymmetricKey, info: Data, outputByteCount: Int) -> Data {
+        let hashLen = 32 // SHA-256 output
+        let n = Int(ceil(Double(outputByteCount) / Double(hashLen)))
+        var okm = Data()
+        var previousT = Data()
+
+        for i in 1...n {
+            var input = previousT
+            input.append(info)
+            input.append(UInt8(i))
+            let t = Data(HMAC<CryptoKit.SHA256>.authenticationCode(for: input, using: prk))
+            okm.append(t)
+            previousT = t
+        }
+
+        return Data(okm.prefix(outputByteCount))
     }
 
     // MARK: - ChaCha20 (raw stream cipher, not AEAD)
@@ -374,6 +391,16 @@ enum NIP44 {
 
         // Round up to next chunk boundary
         return ((unpaddedLen + chunk - 1) / chunk) * chunk
+    }
+
+    // MARK: - Test helpers
+
+    /// Exposes message key derivation for unit testing against spec vectors.
+    static func testDeriveMessageKeys(
+        conversationKey: SymmetricKey,
+        nonce: Data
+    ) -> (chachaKey: Data, chachaNonce: Data, hmacKey: Data) {
+        deriveMessageKeys(conversationKey: conversationKey, nonce: nonce)
     }
 
     // MARK: - Constant-time comparison

@@ -87,24 +87,40 @@ final class NIP46Service: ObservableObject {
 
         // For client-initiated flow (nostrconnect://), send connect response
         // immediately so the client knows the signer is ready.
+        // Uses NIP-04 encryption — most clients (Primal, Damus, etc.) expect NIP-04 for NIP-46.
         if connectionInfo.flow == .clientInitiated {
             let secret = connectionInfo.secret ?? ""
             let clientPubkey = session.clientPubkey
-            let convKey = session.conversationKey
             let relays = session.relays
+            let privKey = signerPrivateKey
 
-            print("[NIP46] Client-initiated flow — sending connect response (secret=\(secret.isEmpty ? "empty" : secret.prefix(8) + "..."))")
+            print("[NIP46] Client-initiated flow — sending connect response (NIP-04)")
+            print("[NIP46]   Secret: \(secret.isEmpty ? "empty" : String(secret.prefix(8)) + "...")")
 
             Task {
                 do {
+                    let clientPubkeyData = try NostrKeyUtils.hexDecode(clientPubkey)
+
                     let response = NIP46Response.success(
                         id: UUID().uuidString,
                         result: secret
                     )
-                    let encrypted = try NIP46MessageHandler.encryptResponse(
-                        response,
-                        conversationKey: convKey
+                    let encoder = JSONEncoder()
+                    encoder.outputFormatting = .sortedKeys
+                    let jsonData = try encoder.encode(response)
+                    guard let jsonString = String(data: jsonData, encoding: .utf8) else {
+                        print("[NIP46] ✗ Failed to encode connect response JSON")
+                        return
+                    }
+                    print("[NIP46]   Connect response JSON: \(jsonString)")
+
+                    // Encrypt with NIP-04 (legacy, widely supported by NIP-46 clients)
+                    let encrypted = try NIP04.encrypt(
+                        plaintext: jsonString,
+                        privateKey: privKey,
+                        publicKey: clientPubkeyData
                     )
+                    print("[NIP46]   Encrypted with NIP-04: \(encrypted.prefix(40))...")
 
                     for relayURL in relays {
                         print("[NIP46] → Connect response to \(relayURL)...")
@@ -336,12 +352,29 @@ final class NIP46Service: ObservableObject {
         relayURL: String
     ) async {
         do {
-            // 1. Decrypt and parse request
+            // 1. Decrypt and parse request (try NIP-44 first, then NIP-04 fallback)
             print("[NIP46] Decrypting request from \(session.displayName)...")
-            let request = try NIP46MessageHandler.decryptRequest(
-                payload: encryptedContent,
-                conversationKey: session.conversationKey
-            )
+            let request: NIP46Request
+            do {
+                request = try NIP46MessageHandler.decryptRequest(
+                    payload: encryptedContent,
+                    conversationKey: session.conversationKey
+                )
+                print("[NIP46]   Decrypted with NIP-44")
+            } catch {
+                print("[NIP46]   NIP-44 decryption failed (\(error)), trying NIP-04...")
+                guard let privKey = signerPrivateKey else {
+                    throw error
+                }
+                let clientPubkeyData = try NostrKeyUtils.hexDecode(session.clientPubkey)
+                let json = try NIP04.decrypt(
+                    payload: encryptedContent,
+                    privateKey: privKey,
+                    publicKey: clientPubkeyData
+                )
+                print("[NIP46]   Decrypted with NIP-04: \(json.prefix(100))")
+                request = try NIP46MessageHandler.parseRequest(json)
+            }
             print("[NIP46]   Method: \(request.method)")
             print("[NIP46]   Request ID: \(request.id)")
             print("[NIP46]   Params count: \(request.params.count)")
@@ -486,11 +519,23 @@ final class NIP46Service: ObservableObject {
             content: encryptedContent
         )
 
+        // Compute serialized event for hashing
+        let serialized = NostrEventSerializer.serialise(unsigned)
+        print("[NIP46]   Serialized for hash: \(serialized)")
+
         // Compute ID and sign
         let eventIdData = NostrEventSerializer.computeEventId(for: unsigned)
         let eventIdHex = NostrKeyUtils.hexEncode(eventIdData)
+        print("[NIP46]   Event ID (hash): \(eventIdHex)")
+
         let sigData = try SchnorrSigner.sign(hash: eventIdData, privateKey: privKey)
         let sigHex = NostrKeyUtils.hexEncode(sigData)
+        print("[NIP46]   Signature: \(sigHex)")
+
+        // Verify signature before sending
+        let pubkeyData = try NostrKeyUtils.hexDecode(signerPubkey)
+        let sigValid = try SchnorrSigner.verify(signature: sigData, hash: eventIdData, publicKey: pubkeyData)
+        print("[NIP46]   Signature self-verify: \(sigValid ? "VALID" : "INVALID")")
 
         let signed = unsigned.signed(id: eventIdHex, sig: sigHex)
 
@@ -503,9 +548,13 @@ final class NIP46Service: ObservableObject {
             return
         }
 
+        // Dump full raw EVENT JSON for debugging
+        print("[NIP46] ── Full EVENT JSON ──")
+        print("[NIP46] \(eventString)")
+        print("[NIP46] ── End EVENT JSON ──")
+
         let message = "[\"EVENT\",\(eventString)]"
         print("[NIP46] → EVENT to \(relayURL)")
-        print("[NIP46]   Event ID: \(eventIdHex.prefix(16))...")
         print("[NIP46]   To client: \(toClientPubkey.prefix(16))...")
         print("[NIP46]   Message length: \(message.count) chars")
 

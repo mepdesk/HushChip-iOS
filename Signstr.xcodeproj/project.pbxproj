@@ -96,6 +96,7 @@
 		A1B2C3D400000006000000B6 /* GenerateKeyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D400000002000000B2 /* GenerateKeyView.swift */; };
 		A1B2C3D400000007000000B7 /* ImportNsecView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D400000003000000B3 /* ImportNsecView.swift */; };
 		A1B2C3D400000008000000B8 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D400000004000000B4 /* QRScannerView.swift */; };
+		DD0000110000001A000000BA /* NIP04.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000A0000000A000000AA /* NIP04.swift */; };
 		DD00001100000011000000B1 /* NIP44.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000100000001000000A1 /* NIP44.swift */; };
 		DD00001200000012000000B2 /* NIP46ConnectionParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000002000000A2 /* NIP46ConnectionParser.swift */; };
 		DD00001300000013000000B3 /* NIP46Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000300000003000000A3 /* NIP46Session.swift */; };
@@ -218,6 +219,7 @@
 		A1B2C3D400000002000000B2 /* GenerateKeyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateKeyView.swift; sourceTree = "<group>"; };
 		A1B2C3D400000003000000B3 /* ImportNsecView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportNsecView.swift; sourceTree = "<group>"; };
 		A1B2C3D400000004000000B4 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
+		DD00000A0000000A000000AA /* NIP04.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP04.swift; sourceTree = "<group>"; };
 		DD00000100000001000000A1 /* NIP44.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP44.swift; sourceTree = "<group>"; };
 		DD00000200000002000000A2 /* NIP46ConnectionParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP46ConnectionParser.swift; sourceTree = "<group>"; };
 		DD00000300000003000000A3 /* NIP46Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP46Session.swift; sourceTree = "<group>"; };
@@ -551,6 +553,7 @@
 		DD00002000000020000000C0 /* NIP46 */ = {
 			isa = PBXGroup;
 			children = (
+				DD00000A0000000A000000AA /* NIP04.swift */,
 				DD00000100000001000000A1 /* NIP44.swift */,
 				DD00000200000002000000A2 /* NIP46ConnectionParser.swift */,
 				DD00000300000003000000A3 /* NIP46Session.swift */,
@@ -742,6 +745,7 @@
 				BB00004000000040000000F0 /* SecureEnclaveKeyStore.swift in Sources */,
 				BB00004200000042000000F2 /* KeyManager.swift in Sources */,
 				BB00004400000044000000F4 /* SoftwareSigner.swift in Sources */,
+				DD0000110000001A000000BA /* NIP04.swift in Sources */,
 				DD00001100000011000000B1 /* NIP44.swift in Sources */,
 				DD00001200000012000000B2 /* NIP46ConnectionParser.swift in Sources */,
 				DD00001300000013000000B3 /* NIP46Session.swift in Sources */,

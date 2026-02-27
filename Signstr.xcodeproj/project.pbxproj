@@ -105,6 +105,8 @@
 		A538B28FADB0ECDC417F7D59 /* AddConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AE442E835C079EB716BA511 /* AddConnectionView.swift */; };
 		381409E49B4616CC25797878 /* SigningRequestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A09BFBE517A0FFAC2B24FC82 /* SigningRequestView.swift */; };
 		DD00001700000017000000B7 /* NIP46Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000700000007000000A7 /* NIP46Tests.swift */; };
+		DD00001800000018000000B8 /* NIP46RelayStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000800000008000000A8 /* NIP46RelayStore.swift */; };
+		FF00000200000002000000A2 /* RelayConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000100000001000000A1 /* RelayConfigView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -225,6 +227,8 @@
 		1AE442E835C079EB716BA511 /* AddConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddConnectionView.swift; sourceTree = "<group>"; };
 		A09BFBE517A0FFAC2B24FC82 /* SigningRequestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SigningRequestView.swift; sourceTree = "<group>"; };
 		DD00000700000007000000A7 /* NIP46Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP46Tests.swift; sourceTree = "<group>"; };
+		DD00000800000008000000A8 /* NIP46RelayStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP46RelayStore.swift; sourceTree = "<group>"; };
+		FF00000100000001000000A1 /* RelayConfigView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayConfigView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -507,6 +511,7 @@
 				D03110942BE40D2400ED0997 /* LogsView.swift */,
 				AA00000100000001000000A1 /* AboutView.swift */,
 				EE00001100000011000000F1 /* EmergencyExportView.swift */,
+				FF00000100000001000000A1 /* RelayConfigView.swift */,
 			);
 			path = Menu;
 			sourceTree = "<group>";
@@ -553,6 +558,7 @@
 				DD00000500000005000000A5 /* NIP46Service.swift */,
 				EE00000100000001000000E1 /* ApprovalPolicy.swift */,
 				EE00000300000003000000E3 /* SigningLogStore.swift */,
+				DD00000800000008000000A8 /* NIP46RelayStore.swift */,
 			);
 			path = NIP46;
 			sourceTree = "<group>";
@@ -813,6 +819,8 @@
 				EE00000800000008000000E8 /* EventLogView.swift in Sources */,
 				EE00001000000010000000F0 /* BackUpKeyView.swift in Sources */,
 				EE00001200000012000000F2 /* EmergencyExportView.swift in Sources */,
+				DD00001800000018000000B8 /* NIP46RelayStore.swift in Sources */,
+				FF00000200000002000000A2 /* RelayConfigView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

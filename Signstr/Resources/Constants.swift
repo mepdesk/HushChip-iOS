@@ -21,5 +21,7 @@ struct Constants {
         static let onboardingComplete = "onboardingComplete"
         // True once the user has created or imported a key.
         static let keySetupComplete = "keySetupComplete"
+        // Biometrics (Face ID / Touch ID) enabled for signing approval. Defaults to true.
+        static let biometricsEnabled = "signstr.biometrics_enabled"
     }
 }

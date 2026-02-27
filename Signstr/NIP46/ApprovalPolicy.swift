@@ -79,13 +79,32 @@ enum ApprovalPolicy: String, Codable, CaseIterable, Identifiable {
 enum ApprovalPolicyStore {
     private static let storageKey = "signstr.approval_policies"
     private static let firstApprovalKey = "signstr.first_approval_times"
+    private static let defaultPolicyKey = "signstr.default_approval_policy"
 
-    /// Returns the stored policy for a client, or `.alwaysAsk` if none set.
+    // MARK: - Default policy for new connections
+
+    /// Returns the default approval policy applied to new connections.
+    static var defaultPolicy: ApprovalPolicy {
+        get {
+            guard let raw = UserDefaults.standard.string(forKey: defaultPolicyKey),
+                  let policy = ApprovalPolicy(rawValue: raw) else {
+                return .alwaysAsk
+            }
+            return policy
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: defaultPolicyKey)
+        }
+    }
+
+    // MARK: - Per-app policies
+
+    /// Returns the stored policy for a client, or the default policy if none set.
     static func policy(for clientPubkey: String) -> ApprovalPolicy {
         guard let dict = UserDefaults.standard.dictionary(forKey: storageKey) as? [String: String],
               let raw = dict[clientPubkey],
               let policy = ApprovalPolicy(rawValue: raw) else {
-            return .alwaysAsk
+            return defaultPolicy
         }
         return policy
     }

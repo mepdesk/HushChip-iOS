@@ -18,6 +18,7 @@ enum NavigationRoutes: Hashable {
     case eventLog
     case emergencyExport
     case about
+    case relayConfig
 }
 
 // MARK: - Tab selection

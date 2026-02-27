@@ -99,10 +99,15 @@ enum NIP04 {
     // MARK: - ECDH
 
     /// Computes the raw 32-byte x-only ECDH shared secret (no HKDF, unlike NIP-44).
-    private static func ecdhSharedSecret(privateKey: Data, publicKey: Data) throws -> Data {
-        // Reuse NIP-44's ECDH which returns the raw x-coordinate
+    /// This matches nostr-tools: `secp256k1.getSharedSecret(privkey, '02' + pubkey).slice(1, 33)`
+    /// Uses raw x-coordinate of the ECDH shared point — no SHA256 hashing.
+    static func ecdhSharedSecret(privateKey: Data, publicKey: Data) throws -> Data {
+        guard privateKey.count == 32 else { throw NIP04Error.ecdhFailed }
+        guard publicKey.count == 32 else { throw NIP04Error.ecdhFailed }
         do {
-            return try NIP44.ecdhSharedSecret(privateKey: privateKey, publicKey: publicKey)
+            let result = try NIP44.ecdhSharedSecret(privateKey: privateKey, publicKey: publicKey)
+            print("[NIP04] ECDH shared secret (first 8 bytes): \(result.prefix(8).map { String(format: "%02x", $0) }.joined())")
+            return result
         } catch {
             throw NIP04Error.ecdhFailed
         }

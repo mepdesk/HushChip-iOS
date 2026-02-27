@@ -19,6 +19,7 @@ enum NavigationRoutes: Hashable {
     case emergencyExport
     case about
     case relayConfig
+    case nip46TestClient
 }
 
 // MARK: - Tab selection

@@ -108,6 +108,7 @@
 		DD00001700000017000000B7 /* NIP46Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000700000007000000A7 /* NIP46Tests.swift */; };
 		DD00001800000018000000B8 /* NIP46RelayStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000800000008000000A8 /* NIP46RelayStore.swift */; };
 		FF00000200000002000000A2 /* RelayConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000100000001000000A1 /* RelayConfigView.swift */; };
+		FF00000400000004000000A4 /* NIP46TestClientView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000300000003000000A3 /* NIP46TestClientView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -231,6 +232,7 @@
 		DD00000700000007000000A7 /* NIP46Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP46Tests.swift; sourceTree = "<group>"; };
 		DD00000800000008000000A8 /* NIP46RelayStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP46RelayStore.swift; sourceTree = "<group>"; };
 		FF00000100000001000000A1 /* RelayConfigView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayConfigView.swift; sourceTree = "<group>"; };
+		FF00000300000003000000A3 /* NIP46TestClientView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP46TestClientView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -442,8 +444,17 @@
 				D0E4337D2BD3F9C7008DBAA6 /* Home */,
 				DD00002100000021000000C1 /* Connections */,
 				CC00000800000008000000A8 /* Identity */,
+				FF00000500000005000000A5 /* Debug */,
 			);
 			path = Journeys;
+			sourceTree = "<group>";
+		};
+		FF00000500000005000000A5 /* Debug */ = {
+			isa = PBXGroup;
+			children = (
+				FF00000300000003000000A3 /* NIP46TestClientView.swift */,
+			);
+			path = Debug;
 			sourceTree = "<group>";
 		};
 		D0E4337C2BD3F984008DBAA6 /* Components */ = {
@@ -825,6 +836,7 @@
 				EE00001200000012000000F2 /* EmergencyExportView.swift in Sources */,
 				DD00001800000018000000B8 /* NIP46RelayStore.swift in Sources */,
 				FF00000200000002000000A2 /* RelayConfigView.swift in Sources */,
+				FF00000400000004000000A4 /* NIP46TestClientView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

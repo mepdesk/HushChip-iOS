@@ -88,6 +88,10 @@ struct SettingsTabView: View {
                         settingsRow(icon: "info.circle", title: "About", subtitle: "Version, licence, and credits") {
                             cardState.homeNavigationPath.append(NavigationRoutes.about)
                         }
+                        Spacer().frame(height: 8)
+                        settingsRow(icon: "ant", title: "NIP-46 Test Client", subtitle: "Debug end-to-end remote signing") {
+                            cardState.homeNavigationPath.append(NavigationRoutes.nip46TestClient)
+                        }
 
                         Spacer().frame(height: 32)
 
@@ -133,6 +137,8 @@ struct SettingsTabView: View {
                     AboutView(homeNavigationPath: $cardState.homeNavigationPath)
                 case .relayConfig:
                     RelayConfigView()
+                case .nip46TestClient:
+                    NIP46TestClientView()
                 }
             }
         }

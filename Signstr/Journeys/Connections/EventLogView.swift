@@ -118,7 +118,7 @@ struct EventLogView: View {
         HStack(spacing: 12) {
             // Status indicator
             Circle()
-                .fill(entry.approved ? Color(hex: "#2d5a3d") : Color.sgDanger.opacity(0.6))
+                .fill(badgeColor(for: entry))
                 .frame(width: 8, height: 8)
 
             VStack(alignment: .leading, spacing: 4) {
@@ -146,15 +146,13 @@ struct EventLogView: View {
                 }
 
                 // Badge
-                Text(entry.approved ? "APPROVED" : "REJECTED")
+                Text(entry.statusBadge)
                     .font(.outfit(.regular, size: 8))
                     .tracking(2)
-                    .foregroundColor(entry.approved ? Color(hex: "#2d5a3d") : .sgDanger)
+                    .foregroundColor(badgeColor(for: entry))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(
-                        (entry.approved ? Color(hex: "#2d5a3d") : Color.sgDanger).opacity(0.15)
-                    )
+                    .background(badgeColor(for: entry).opacity(0.15))
                     .cornerRadius(4)
             }
         }
@@ -168,6 +166,12 @@ struct EventLogView: View {
     }
 
     // MARK: - Helpers
+
+    private func badgeColor(for entry: SigningLogEntry) -> Color {
+        if !entry.approved { return .sgDanger.opacity(0.6) }
+        if entry.autoApproved { return Color(hex: "#3d5a8a") } // blue-tint for auto
+        return Color(hex: "#2d5a3d") // green for manual approve
+    }
 
     private func formatTimestamp(_ date: Date) -> String {
         let formatter = DateFormatter()
@@ -225,7 +229,7 @@ struct EventLogDetailView: View {
 
                         detailRow(label: "EVENT KIND", value: entry.kindDescription)
 
-                        detailRow(label: "STATUS", value: entry.approved ? "Approved" : "Rejected")
+                        detailRow(label: "STATUS", value: entry.statusBadge.capitalized)
 
                         if !entry.contentPreview.isEmpty {
                             VStack(alignment: .leading, spacing: 4) {

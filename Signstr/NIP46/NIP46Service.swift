@@ -254,6 +254,7 @@ final class NIP46Service: ObservableObject {
                     eventKind: eventKind,
                     content: eventContent,
                     approved: approved,
+                    autoApproved: autoApprove && approved,
                     eventJSON: request.params.first ?? ""
                 )
 

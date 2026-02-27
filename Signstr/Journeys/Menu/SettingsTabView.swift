@@ -158,9 +158,6 @@ struct SettingsTabView: View {
         } message: {
             Text("This is your last chance. Your key will be wiped and all sessions will be disconnected.")
         }
-        .sheet(isPresented: $showPolicyPicker) {
-            defaultPolicyPickerSheet
-        }
     }
 
     // MARK: - Approval policy row
@@ -196,6 +193,9 @@ struct SettingsTabView: View {
                 RoundedRectangle(cornerRadius: Dimensions.cardCornerRadius)
                     .stroke(Color.sgBorder, lineWidth: 1)
             )
+        }
+        .sheet(isPresented: $showPolicyPicker) {
+            defaultPolicyPickerSheet
         }
     }
 
@@ -244,89 +244,84 @@ struct SettingsTabView: View {
     // MARK: - Default policy picker sheet
 
     private var defaultPolicyPickerSheet: some View {
-        ZStack {
-            Color.sgBg.ignoresSafeArea()
+        VStack(spacing: 0) {
+            Spacer().frame(height: 12)
+
+            Capsule()
+                .fill(Color.sgBorder)
+                .frame(width: 36, height: 4)
+
+            Spacer().frame(height: 24)
+
+            Text("DEFAULT APPROVAL POLICY")
+                .font(.outfit(.regular, size: 9))
+                .tracking(3)
+                .foregroundColor(.sgTextGhost)
+
+            Spacer().frame(height: 8)
+
+            Text("Applied to new connections by default.")
+                .font(.outfit(.light, size: 12))
+                .foregroundColor(.sgTextFaint)
+
+            Spacer().frame(height: 20)
 
             VStack(spacing: 0) {
-                Spacer().frame(height: 12)
+                ForEach(ApprovalPolicy.allCases) { policy in
+                    Button(action: {
+                        defaultPolicy = policy
+                        ApprovalPolicyStore.defaultPolicy = policy
+                        showPolicyPicker = false
+                    }) {
+                        HStack(spacing: 12) {
+                            Circle()
+                                .fill(defaultPolicy == policy ? Color.sgTextBright : Color.clear)
+                                .frame(width: 8, height: 8)
+                                .overlay(
+                                    Circle().stroke(
+                                        defaultPolicy == policy ? Color.sgTextBright : Color.sgTextGhost,
+                                        lineWidth: 1
+                                    )
+                                )
 
-                Capsule()
-                    .fill(Color.sgBorder)
-                    .frame(width: 36, height: 4)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(policy.displayName)
+                                    .font(.outfit(.regular, size: 13))
+                                    .foregroundColor(defaultPolicy == policy ? .sgTextBright : .sgTextBody)
 
-                Spacer().frame(height: 24)
-
-                Text("DEFAULT APPROVAL POLICY")
-                    .font(.outfit(.regular, size: 9))
-                    .tracking(3)
-                    .foregroundColor(.sgTextGhost)
-
-                Spacer().frame(height: 8)
-
-                Text("Applied to new connections by default.")
-                    .font(.outfit(.light, size: 12))
-                    .foregroundColor(.sgTextFaint)
-
-                Spacer().frame(height: 20)
-
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 0) {
-                        ForEach(ApprovalPolicy.allCases) { policy in
-                            Button(action: {
-                                defaultPolicy = policy
-                                ApprovalPolicyStore.defaultPolicy = policy
-                                showPolicyPicker = false
-                            }) {
-                                HStack(spacing: 12) {
-                                    Circle()
-                                        .fill(defaultPolicy == policy ? Color.sgTextBright : Color.clear)
-                                        .frame(width: 8, height: 8)
-                                        .overlay(
-                                            Circle().stroke(
-                                                defaultPolicy == policy ? Color.sgTextBright : Color.sgTextGhost,
-                                                lineWidth: 1
-                                            )
-                                        )
-
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(policy.displayName)
-                                            .font(.outfit(.regular, size: 13))
-                                            .foregroundColor(defaultPolicy == policy ? .sgTextBright : .sgTextBody)
-
-                                        Text(policy.description)
-                                            .font(.outfit(.light, size: 10))
-                                            .foregroundColor(.sgTextFaint)
-                                            .lineLimit(2)
-                                    }
-
-                                    Spacer()
-                                }
-                                .padding(.horizontal, Dimensions.cardPadding)
-                                .padding(.vertical, 10)
+                                Text(policy.description)
+                                    .font(.outfit(.light, size: 10))
+                                    .foregroundColor(.sgTextFaint)
+                                    .lineLimit(2)
                             }
 
-                            if policy != ApprovalPolicy.allCases.last {
-                                Rectangle()
-                                    .fill(Color.sgBorder)
-                                    .frame(height: 1)
-                                    .padding(.horizontal, Dimensions.cardPadding)
-                            }
+                            Spacer()
                         }
+                        .padding(.horizontal, Dimensions.cardPadding)
+                        .padding(.vertical, 10)
                     }
-                    .background(Color.sgBgRaised)
-                    .cornerRadius(Dimensions.cardCornerRadius)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Dimensions.cardCornerRadius)
-                            .stroke(Color.sgBorder, lineWidth: 1)
-                    )
-                    .padding(.horizontal, 24)
-                }
 
-                Spacer().frame(height: 20)
+                    if policy != ApprovalPolicy.allCases.last {
+                        Rectangle()
+                            .fill(Color.sgBorder)
+                            .frame(height: 1)
+                            .padding(.horizontal, Dimensions.cardPadding)
+                    }
+                }
             }
+            .background(Color.sgBgRaised)
+            .cornerRadius(Dimensions.cardCornerRadius)
+            .overlay(
+                RoundedRectangle(cornerRadius: Dimensions.cardCornerRadius)
+                    .stroke(Color.sgBorder, lineWidth: 1)
+            )
+            .padding(.horizontal, 24)
+
+            Spacer()
         }
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.hidden)
+        .background(Color.sgBg)
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
     }
 
     // MARK: - Delete key

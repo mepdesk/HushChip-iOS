@@ -16,12 +16,13 @@ struct ConnectionsTabView: View {
 
     @State private var showAddConnection = false
     @State private var selectedSession: NIP46Session?
+    @State private var hasKey = KeyManager.keyExists()
 
     var body: some View {
         ZStack {
             Color.sgBg.ignoresSafeArea()
 
-            if !KeyManager.keyExists() {
+            if !hasKey {
                 noKeyContent
             } else if nip46Service.activeSessions.isEmpty {
                 emptyContent
@@ -29,6 +30,7 @@ struct ConnectionsTabView: View {
                 sessionListContent
             }
         }
+        .onAppear { hasKey = KeyManager.keyExists() }
         .fullScreenCover(isPresented: $showAddConnection) {
             AddConnectionView()
                 .environmentObject(nip46Service)

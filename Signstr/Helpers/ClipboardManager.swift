@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Gridmark Technologies Ltd (Signstr)
-// https://github.com/hushchip/Signstr-iOS
+// https://github.com/signstr/Signstr-iOS
 //
 // Based on Seedkeeper-iOS by Toporin / Satochip S.R.L.
 // https://github.com/Toporin/Seedkeeper-iOS
@@ -18,6 +18,10 @@ import Combine
 
 /// Centralised clipboard manager. Copies text, starts a 30-second clear timer,
 /// clears immediately when the app backgrounds, and publishes a toast flag.
+///
+/// IMPORTANT: Only clears the clipboard if it was populated via `copy(_:)`.
+/// Public data copied directly via `UIPasteboard.general.string` (e.g. npub)
+/// is NOT cleared on background — only private data (nsec, etc.) is.
 final class ClipboardManager: ObservableObject {
     static let shared = ClipboardManager()
 
@@ -27,13 +31,16 @@ final class ClipboardManager: ObservableObject {
     private var clearTimer: Timer?
     private var backgroundObserver: Any?
 
+    /// True only while we have sensitive data on the clipboard that we put there.
+    private var hasSensitiveCopy = false
+
     private init() {
         backgroundObserver = NotificationCenter.default.addObserver(
             forName: UIApplication.willResignActiveNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.clearNow()
+            self?.clearOnBackground()
         }
     }
 
@@ -44,9 +51,12 @@ final class ClipboardManager: ObservableObject {
         clearTimer?.invalidate()
     }
 
-    /// Copy text to the system clipboard and start the 30-second auto-clear.
+    /// Copy sensitive text to the system clipboard and start the 30-second auto-clear.
+    /// Only use this for private data (nsec, logs). For public data (npub), use
+    /// `UIPasteboard.general.string` directly.
     func copy(_ text: String) {
         UIPasteboard.general.string = text
+        hasSensitiveCopy = true
 
         // Reset timer on every copy
         clearTimer?.invalidate()
@@ -57,10 +67,17 @@ final class ClipboardManager: ObservableObject {
         }
     }
 
+    /// Called on app background — only clears if we have an active sensitive copy.
+    private func clearOnBackground() {
+        guard hasSensitiveCopy else { return }
+        clearNow()
+    }
+
     /// Immediately wipe the clipboard and flash the toast.
     private func clearNow() {
         clearTimer?.invalidate()
         clearTimer = nil
+        hasSensitiveCopy = false
 
         guard UIPasteboard.general.hasStrings else { return }
         UIPasteboard.general.string = ""

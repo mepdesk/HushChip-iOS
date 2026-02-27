@@ -56,6 +56,13 @@ final class NIP46Service: ObservableObject {
         from connectionInfo: NIP46ConnectionInfo,
         signerPrivateKey: Data
     ) throws -> NIP46Session {
+        print("[NIP46] ── Adding connection ──")
+        print("[NIP46]   Client pubkey: \(connectionInfo.pubkey)")
+        print("[NIP46]   Name: \(connectionInfo.name ?? "nil")")
+        print("[NIP46]   Relays: \(connectionInfo.relays)")
+        print("[NIP46]   Flow: \(connectionInfo.flow)")
+        print("[NIP46]   Secret present: \(connectionInfo.secret != nil)")
+
         let session = try NIP46Session(
             connectionInfo: connectionInfo,
             signerPrivateKey: signerPrivateKey
@@ -67,14 +74,18 @@ final class NIP46Service: ObservableObject {
             let pubkeyData = try SchnorrSigner.derivePublicKey(from: signerPrivateKey)
             signerPubkeyHex = NostrKeyUtils.hexEncode(pubkeyData)
         }
+        print("[NIP46]   Signer pubkey: \(signerPubkeyHex ?? "nil")")
+        print("[NIP46]   Conversation key derived: \(session.conversationKey.withUnsafeBytes { Data($0).count }) bytes")
 
         sessions[session.clientPubkey] = session
 
         // Connect to session relays and start listening
         for relayURL in session.relays {
+            print("[NIP46]   Subscribing to relay: \(relayURL)")
             subscribeToRelay(relayURL)
         }
 
+        print("[NIP46] ── Connection added, waiting for client requests ──")
         return session
     }
 
@@ -100,9 +111,16 @@ final class NIP46Service: ObservableObject {
 
     /// Subscribes to kind 24133 events on a relay addressed to our pubkey.
     private func subscribeToRelay(_ relayURLString: String) {
-        guard relayConnections[relayURLString] == nil,
-              let url = URL(string: relayURLString) else { return }
+        guard relayConnections[relayURLString] == nil else {
+            print("[NIP46] Already connected to \(relayURLString), skipping")
+            return
+        }
+        guard let url = URL(string: relayURLString) else {
+            print("[NIP46] ⚠ Invalid relay URL: \(relayURLString)")
+            return
+        }
 
+        print("[NIP46] Opening WebSocket to \(relayURLString)...")
         let task = urlSession.webSocketTask(with: url)
         relayConnections[relayURLString] = task
         task.resume()
@@ -115,7 +133,10 @@ final class NIP46Service: ObservableObject {
     }
 
     private func sendSubscription(to task: URLSessionWebSocketTask, relayURL: String) {
-        guard let signerPubkey = signerPubkeyHex else { return }
+        guard let signerPubkey = signerPubkeyHex else {
+            print("[NIP46] ⚠ Cannot subscribe — signer pubkey not set")
+            return
+        }
 
         // REQ: subscribe to kind 24133 events tagged to our pubkey
         let subId = "signstr-\(signerPubkey.prefix(8))"
@@ -126,10 +147,20 @@ final class NIP46Service: ObservableObject {
         ]
 
         guard let filterData = try? JSONSerialization.data(withJSONObject: filter),
-              let filterString = String(data: filterData, encoding: .utf8) else { return }
+              let filterString = String(data: filterData, encoding: .utf8) else {
+            print("[NIP46] ⚠ Failed to serialize REQ filter")
+            return
+        }
 
         let message = "[\"REQ\",\"\(subId)\",\(filterString)]"
-        task.send(.string(message)) { _ in }
+        print("[NIP46] → REQ to \(relayURL): \(message)")
+        task.send(.string(message)) { error in
+            if let error {
+                print("[NIP46] ⚠ REQ send error: \(error)")
+            } else {
+                print("[NIP46] ✓ REQ sent to \(relayURL)")
+            }
+        }
     }
 
     private func disconnectRelay(_ relayURLString: String) {
@@ -158,8 +189,8 @@ final class NIP46Service: ObservableObject {
                     if let task = self?.relayConnections[relayURL] {
                         self?.listenForMessages(on: task, relayURL: relayURL)
                     }
-                case .failure:
-                    // Relay disconnected — remove connection
+                case .failure(let error):
+                    print("[NIP46] ⚠ Relay \(relayURL) disconnected: \(error)")
                     self?.relayConnections.removeValue(forKey: relayURL)
                 }
             }
@@ -170,18 +201,70 @@ final class NIP46Service: ObservableObject {
     private func handleRelayMessage(_ text: String, relayURL: String) {
         guard let data = text.data(using: .utf8),
               let array = try? JSONSerialization.jsonObject(with: data) as? [Any],
-              array.count >= 3,
-              let messageType = array[0] as? String,
-              messageType == "EVENT",
-              let eventDict = array[2] as? [String: Any] else { return }
+              array.count >= 2,
+              let messageType = array[0] as? String else {
+            print("[NIP46] ← Unparseable message from \(relayURL): \(text.prefix(200))")
+            return
+        }
+
+        // Log all relay messages (OK, EOSE, NOTICE, EVENT, etc.)
+        switch messageType {
+        case "OK":
+            let eventId = (array.count > 1 ? array[1] as? String : nil) ?? "?"
+            let accepted = (array.count > 2 ? array[2] as? Bool : nil) ?? false
+            let reason = (array.count > 3 ? array[3] as? String : nil) ?? ""
+            print("[NIP46] ← OK from \(relayURL): event=\(eventId.prefix(16))... accepted=\(accepted) \(reason)")
+            return
+        case "EOSE":
+            let subId = (array.count > 1 ? array[1] as? String : nil) ?? "?"
+            print("[NIP46] ← EOSE from \(relayURL): sub=\(subId)")
+            return
+        case "NOTICE":
+            let notice = (array.count > 1 ? array[1] as? String : nil) ?? "?"
+            print("[NIP46] ← NOTICE from \(relayURL): \(notice)")
+            return
+        case "EVENT":
+            break // Process below
+        default:
+            print("[NIP46] ← \(messageType) from \(relayURL): \(text.prefix(200))")
+            return
+        }
+
+        guard array.count >= 3,
+              let eventDict = array[2] as? [String: Any] else {
+            print("[NIP46] ← EVENT from \(relayURL) but no event dict")
+            return
+        }
 
         // Parse the event
-        guard let kind = eventDict["kind"] as? Int, kind == 24133,
-              let senderPubkey = eventDict["pubkey"] as? String,
-              let encryptedContent = eventDict["content"] as? String else { return }
+        guard let kind = eventDict["kind"] as? Int else {
+            print("[NIP46] ← EVENT from \(relayURL) missing kind")
+            return
+        }
+
+        guard kind == 24133 else {
+            print("[NIP46] ← EVENT from \(relayURL) kind=\(kind) (ignoring, not 24133)")
+            return
+        }
+
+        guard let senderPubkey = eventDict["pubkey"] as? String,
+              let encryptedContent = eventDict["content"] as? String else {
+            print("[NIP46] ← EVENT kind 24133 from \(relayURL) but missing pubkey or content")
+            return
+        }
+
+        print("[NIP46] ← EVENT kind 24133 from \(relayURL)")
+        print("[NIP46]   Sender: \(senderPubkey.prefix(16))...")
+        print("[NIP46]   Content length: \(encryptedContent.count) chars")
 
         // Find the session for this client
-        guard let session = sessions[senderPubkey] else { return }
+        guard let session = sessions[senderPubkey] else {
+            print("[NIP46] ⚠ No session found for sender \(senderPubkey.prefix(16))...")
+            print("[NIP46]   Known sessions: \(sessions.keys.map { String($0.prefix(16)) })")
+            return
+        }
+
+        print("[NIP46]   Matched session: \(session.displayName)")
 
         // Process the request asynchronously
         Task {
@@ -218,10 +301,14 @@ final class NIP46Service: ObservableObject {
     ) async {
         do {
             // 1. Decrypt and parse request
+            print("[NIP46] Decrypting request from \(session.displayName)...")
             let request = try NIP46MessageHandler.decryptRequest(
                 payload: encryptedContent,
                 conversationKey: session.conversationKey
             )
+            print("[NIP46]   Method: \(request.method)")
+            print("[NIP46]   Request ID: \(request.id)")
+            print("[NIP46]   Params count: \(request.params.count)")
 
             // 2. For sign_event, check approval policy before prompting
             if request.method == "sign_event" {
@@ -283,27 +370,32 @@ final class NIP46Service: ObservableObject {
             }
 
             // 3. Dispatch to handler (signer will trigger Face ID for sign_event)
+            print("[NIP46] Dispatching \(request.method) to handler...")
             let response = await NIP46MessageHandler.handleRequest(
                 request,
                 signer: signer,
                 session: session
             )
+            print("[NIP46]   Response: result=\(response.result?.prefix(80) ?? "nil") error=\(response.error ?? "nil")")
 
             // 4. Encrypt response
+            print("[NIP46] Encrypting response...")
             let encryptedResponse = try NIP46MessageHandler.encryptResponse(
                 response,
                 conversationKey: session.conversationKey
             )
+            print("[NIP46]   Encrypted response length: \(encryptedResponse.count) chars")
 
             // 5. Build and send response event
+            print("[NIP46] Sending response event to \(relayURL)...")
             try await sendResponse(
                 encryptedContent: encryptedResponse,
                 toClientPubkey: session.clientPubkey,
                 relayURL: relayURL
             )
+            print("[NIP46] ✓ Response sent for \(request.method) (id: \(request.id))")
         } catch {
-            // Log error but don't crash — the client will timeout
-            print("[NIP46Service] Error processing request: \(error)")
+            print("[NIP46] ✗ Error processing request: \(error)")
         }
     }
 
@@ -345,7 +437,10 @@ final class NIP46Service: ObservableObject {
         relayURL: String
     ) async throws {
         guard let signerPubkey = signerPubkeyHex,
-              let privKey = signerPrivateKey else { return }
+              let privKey = signerPrivateKey else {
+            print("[NIP46] ⚠ Cannot send response — missing signer pubkey or private key")
+            return
+        }
 
         // Build unsigned event
         let unsigned = NostrEvent.unsigned(
@@ -367,12 +462,23 @@ final class NIP46Service: ObservableObject {
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
         let eventJSON = try encoder.encode(signed)
-        guard let eventString = String(data: eventJSON, encoding: .utf8) else { return }
+        guard let eventString = String(data: eventJSON, encoding: .utf8) else {
+            print("[NIP46] ⚠ Failed to encode signed event to string")
+            return
+        }
 
         let message = "[\"EVENT\",\(eventString)]"
+        print("[NIP46] → EVENT to \(relayURL)")
+        print("[NIP46]   Event ID: \(eventIdHex.prefix(16))...")
+        print("[NIP46]   To client: \(toClientPubkey.prefix(16))...")
+        print("[NIP46]   Message length: \(message.count) chars")
 
         if let task = relayConnections[relayURL] {
             try await task.send(.string(message))
+            print("[NIP46] ✓ EVENT sent to \(relayURL)")
+        } else {
+            print("[NIP46] ⚠ No WebSocket connection for \(relayURL)")
+            print("[NIP46]   Active connections: \(relayConnections.keys.joined(separator: ", "))")
         }
     }
 

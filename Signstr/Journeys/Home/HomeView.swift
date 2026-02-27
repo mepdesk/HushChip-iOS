@@ -97,12 +97,13 @@ struct HomeView: View {
                 showKeySetup = true
             }
         }
-        .fullScreenCover(isPresented: $showOnboarding) {
+        .fullScreenCover(isPresented: $showOnboarding, onDismiss: {
+            if needsKeySetup() {
+                showKeySetup = true
+            }
+        }) {
             OnboardingContainerView(onComplete: {
                 showOnboarding = false
-                if needsKeySetup() {
-                    showKeySetup = true
-                }
             })
             .environmentObject(cardState)
         }

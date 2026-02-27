@@ -55,10 +55,10 @@ final class NIP46Session: Identifiable, Hashable, Sendable {
     let permissions: String?
 
     /// Detected encryption preference for this client.
-    /// Defaults to `.nip04` (most clients). Updated when the first incoming request
-    /// is successfully decrypted, so subsequent responses match the client's format.
+    /// Defaults to `.nip44` (per current NIP-46 spec). Updated when the first incoming
+    /// request is successfully decrypted, so subsequent responses match the client's format.
     /// Only mutated from @MainActor NIP46Service.
-    nonisolated(unsafe) var encryptionPreference: NIP46Encryption = .nip04
+    nonisolated(unsafe) var encryptionPreference: NIP46Encryption = .nip44
 
     init(
         id: UUID = UUID(),

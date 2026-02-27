@@ -91,20 +91,18 @@ final class NIP46Service: ObservableObject {
 
         // For client-initiated flow (nostrconnect://), send connect response
         // immediately so the client knows the signer is ready.
-        // Uses NIP-04 encryption — most clients (Primal, Damus, etc.) expect NIP-04 for NIP-46.
+        // Uses NIP-44 encryption per current NIP-46 spec.
         if connectionInfo.flow == .clientInitiated {
             let secret = connectionInfo.secret ?? ""
             let clientPubkey = session.clientPubkey
             let relays = session.relays
-            let privKey = signerPrivateKey
+            let convKey = session.conversationKey
 
-            print("[NIP46] Client-initiated flow — sending connect response (NIP-04)")
+            print("[NIP46] Client-initiated flow — sending connect response (NIP-44)")
             print("[NIP46]   Secret: \(secret.isEmpty ? "empty" : String(secret.prefix(8)) + "...")")
 
             Task {
                 do {
-                    let clientPubkeyData = try NostrKeyUtils.hexDecode(clientPubkey)
-
                     let response = NIP46Response.success(
                         id: UUID().uuidString,
                         result: secret
@@ -118,14 +116,14 @@ final class NIP46Service: ObservableObject {
                     }
                     print("[NIP46]   Connect response JSON: \(jsonString)")
 
-                    // Encrypt with NIP-04 (legacy, widely supported by NIP-46 clients)
-                    print("[NIP46]   NIP-04 encrypt: privkey=\(NostrKeyUtils.hexEncode(privKey).prefix(8))... pubkey=\(clientPubkey.prefix(16))...")
-                    let encrypted = try NIP04.encrypt(
+                    // Encrypt with NIP-44 (per NIP-46 spec)
+                    let ck4 = convKey.withUnsafeBytes { Data($0).prefix(4).map { String(format: "%02x", $0) }.joined() }
+                    print("[NIP46]   NIP-44 encrypt: conversation key (first 4 bytes): \(ck4)")
+                    let encrypted = try NIP44.encrypt(
                         plaintext: jsonString,
-                        privateKey: privKey,
-                        publicKey: clientPubkeyData
+                        conversationKey: convKey
                     )
-                    print("[NIP46]   Encrypted with NIP-04: \(encrypted.prefix(60))...")
+                    print("[NIP46]   Encrypted with NIP-44: \(encrypted.prefix(60))...")
 
                     for relayURL in relays {
                         print("[NIP46] → Connect response to \(relayURL)...")

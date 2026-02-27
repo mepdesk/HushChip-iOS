@@ -96,6 +96,8 @@
 		DD00001400000014000000B4 /* NIP46MessageHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000400000004000000A4 /* NIP46MessageHandler.swift */; };
 		DD00001500000015000000B5 /* NIP46Service.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000500000005000000A5 /* NIP46Service.swift */; };
 		DD00001600000016000000B6 /* ConnectionsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000600000006000000A6 /* ConnectionsTabView.swift */; };
+		A538B28FADB0ECDC417F7D59 /* AddConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AE442E835C079EB716BA511 /* AddConnectionView.swift */; };
+		381409E49B4616CC25797878 /* SigningRequestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A09BFBE517A0FFAC2B24FC82 /* SigningRequestView.swift */; };
 		DD00001700000017000000B7 /* NIP46Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000700000007000000A7 /* NIP46Tests.swift */; };
 /* End PBXBuildFile section */
 
@@ -208,6 +210,8 @@
 		DD00000400000004000000A4 /* NIP46MessageHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP46MessageHandler.swift; sourceTree = "<group>"; };
 		DD00000500000005000000A5 /* NIP46Service.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP46Service.swift; sourceTree = "<group>"; };
 		DD00000600000006000000A6 /* ConnectionsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionsTabView.swift; sourceTree = "<group>"; };
+		1AE442E835C079EB716BA511 /* AddConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddConnectionView.swift; sourceTree = "<group>"; };
+		A09BFBE517A0FFAC2B24FC82 /* SigningRequestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SigningRequestView.swift; sourceTree = "<group>"; };
 		DD00000700000007000000A7 /* NIP46Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP46Tests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -541,6 +545,8 @@
 			isa = PBXGroup;
 			children = (
 				DD00000600000006000000A6 /* ConnectionsTabView.swift */,
+				1AE442E835C079EB716BA511 /* AddConnectionView.swift */,
+				A09BFBE517A0FFAC2B24FC82 /* SigningRequestView.swift */,
 			);
 			path = Connections;
 			sourceTree = "<group>";
@@ -781,6 +787,8 @@
 				AA00000200000002000000A2 /* AboutView.swift in Sources */,
 				D0C939D22BD6860700F2A17B /* CreatePinCodeView.swift in Sources */,
 				D0F727B02C2B144200C05DB4 /* AppDelegate.swift in Sources */,
+				A538B28FADB0ECDC417F7D59 /* AddConnectionView.swift in Sources */,
+				381409E49B4616CC25797878 /* SigningRequestView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

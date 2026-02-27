@@ -14,6 +14,8 @@ import SwiftUI
 struct ConnectionsTabView: View {
     @EnvironmentObject var nip46Service: NIP46Service
 
+    @State private var showAddConnection = false
+
     var body: some View {
         ZStack {
             Color.sgBg.ignoresSafeArea()
@@ -25,6 +27,17 @@ struct ConnectionsTabView: View {
             } else {
                 sessionListContent
             }
+        }
+        .fullScreenCover(isPresented: $showAddConnection) {
+            AddConnectionView()
+                .environmentObject(nip46Service)
+        }
+        .fullScreenCover(item: $nip46Service.pendingRequest) { request in
+            SigningRequestView(
+                request: request,
+                onApprove: { nip46Service.approvePendingRequest() },
+                onReject: { nip46Service.rejectPendingRequest() }
+            )
         }
     }
 
@@ -161,7 +174,7 @@ struct ConnectionsTabView: View {
 
     private var addConnectionButton: some View {
         Button(action: {
-            // TODO: Navigate to add connection screen (QR scanner + paste)
+            showAddConnection = true
         }) {
             HStack(spacing: 10) {
                 Image(systemName: "qrcode.viewfinder")

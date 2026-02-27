@@ -26,6 +26,9 @@ final class NIP46Service: ObservableObject {
     /// All active sessions, keyed by client pubkey.
     @Published private(set) var sessions: [String: NIP46Session] = [:]
 
+    /// The current pending signing request awaiting user approval (nil = no pending request).
+    @Published var pendingRequest: PendingSigningRequest?
+
     /// The signer used to handle signing requests.
     private let signer: NostrSigner
 
@@ -190,9 +193,24 @@ final class NIP46Service: ObservableObject {
         }
     }
 
+    // MARK: - Approval
+
+    /// Called by the UI when the user approves a pending signing request.
+    func approvePendingRequest() {
+        pendingRequest?.completion(true)
+        pendingRequest = nil
+    }
+
+    /// Called by the UI when the user rejects a pending signing request.
+    func rejectPendingRequest() {
+        pendingRequest?.completion(false)
+        pendingRequest = nil
+    }
+
     // MARK: - Request processing
 
     /// Decrypts, handles, and responds to a NIP-46 request.
+    /// For sign_event, pauses to show the approval UI before signing.
     private func processRequest(
         encryptedContent: String,
         session: NIP46Session,
@@ -205,20 +223,45 @@ final class NIP46Service: ObservableObject {
                 conversationKey: session.conversationKey
             )
 
-            // 2. Dispatch to handler
+            // 2. For sign_event, require user approval before proceeding
+            if request.method == "sign_event" {
+                let approved = await requestUserApproval(
+                    for: request,
+                    session: session
+                )
+                guard approved else {
+                    // Send rejection response
+                    let response = NIP46Response.error(
+                        id: request.id,
+                        message: "User rejected the signing request"
+                    )
+                    let encrypted = try NIP46MessageHandler.encryptResponse(
+                        response,
+                        conversationKey: session.conversationKey
+                    )
+                    try await sendResponse(
+                        encryptedContent: encrypted,
+                        toClientPubkey: session.clientPubkey,
+                        relayURL: relayURL
+                    )
+                    return
+                }
+            }
+
+            // 3. Dispatch to handler (signer will trigger Face ID for sign_event)
             let response = await NIP46MessageHandler.handleRequest(
                 request,
                 signer: signer,
                 session: session
             )
 
-            // 3. Encrypt response
+            // 4. Encrypt response
             let encryptedResponse = try NIP46MessageHandler.encryptResponse(
                 response,
                 conversationKey: session.conversationKey
             )
 
-            // 4. Build and send response event
+            // 5. Build and send response event
             try await sendResponse(
                 encryptedContent: encryptedResponse,
                 toClientPubkey: session.clientPubkey,
@@ -227,6 +270,37 @@ final class NIP46Service: ObservableObject {
         } catch {
             // Log error but don't crash — the client will timeout
             print("[NIP46Service] Error processing request: \(error)")
+        }
+    }
+
+    /// Publishes a PendingSigningRequest and suspends until the user approves or rejects.
+    private func requestUserApproval(
+        for request: NIP46Request,
+        session: NIP46Session
+    ) async -> Bool {
+        // Parse event JSON from params to extract kind and content
+        var eventKind = 0
+        var eventContent = ""
+        if let eventJSON = request.params.first,
+           let data = eventJSON.data(using: .utf8),
+           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            eventKind = dict["kind"] as? Int ?? 0
+            eventContent = dict["content"] as? String ?? ""
+        }
+
+        return await withCheckedContinuation { continuation in
+            let pending = PendingSigningRequest(
+                id: request.id,
+                appName: session.displayName,
+                clientPubkey: session.clientPubkey,
+                eventKind: eventKind,
+                content: eventContent,
+                requestJSON: request.params.first ?? "",
+                completion: { approved in
+                    continuation.resume(returning: approved)
+                }
+            )
+            self.pendingRequest = pending
         }
     }
 

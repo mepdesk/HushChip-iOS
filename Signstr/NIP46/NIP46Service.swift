@@ -75,7 +75,11 @@ final class NIP46Service: ObservableObject {
             signerPubkeyHex = NostrKeyUtils.hexEncode(pubkeyData)
         }
         print("[NIP46]   Signer pubkey: \(signerPubkeyHex ?? "nil")")
-        print("[NIP46]   Conversation key derived: \(session.conversationKey.withUnsafeBytes { Data($0).count }) bytes")
+        print("[NIP46]   Signer privkey (first 4 bytes): \(signerPrivateKey.prefix(4).map { String(format: "%02x", $0) }.joined())")
+        // Log conversation key fingerprint for later comparison with decrypt side
+        let convKeyHex = session.conversationKey.withUnsafeBytes { Data($0).prefix(8).map { String(format: "%02x", $0) }.joined() }
+        print("[NIP46]   Conversation key (first 8 bytes): \(convKeyHex)")
+        print("[NIP46]   ECDH inputs: privkey=\(NostrKeyUtils.hexEncode(signerPrivateKey).prefix(8))... pubkey=\(session.clientPubkey.prefix(16))...")
 
         sessions[session.clientPubkey] = session
 
@@ -115,12 +119,13 @@ final class NIP46Service: ObservableObject {
                     print("[NIP46]   Connect response JSON: \(jsonString)")
 
                     // Encrypt with NIP-04 (legacy, widely supported by NIP-46 clients)
+                    print("[NIP46]   NIP-04 encrypt: privkey=\(NostrKeyUtils.hexEncode(privKey).prefix(8))... pubkey=\(clientPubkey.prefix(16))...")
                     let encrypted = try NIP04.encrypt(
                         plaintext: jsonString,
                         privateKey: privKey,
                         publicKey: clientPubkeyData
                     )
-                    print("[NIP46]   Encrypted with NIP-04: \(encrypted.prefix(40))...")
+                    print("[NIP46]   Encrypted with NIP-04: \(encrypted.prefix(60))...")
 
                     for relayURL in relays {
                         print("[NIP46] → Connect response to \(relayURL)...")
@@ -191,6 +196,7 @@ final class NIP46Service: ObservableObject {
         }
 
         // REQ: subscribe to kind 24133 events tagged to our pubkey
+        print("[NIP46]   Subscribing with signer pubkey: \(signerPubkey)")
         let subId = "signstr-\(signerPubkey.prefix(8))"
         let filter: [String: Any] = [
             "kinds": [24133],
@@ -305,8 +311,16 @@ final class NIP46Service: ObservableObject {
             return
         }
 
+        // Extract p-tag recipients and event ID for debugging
+        let eventId = eventDict["id"] as? String ?? "?"
+        let tags = eventDict["tags"] as? [[String]] ?? []
+        let pTags = tags.filter { $0.first == "p" }.map { $0.dropFirst().joined(separator: ",") }
+
         print("[NIP46] ← EVENT kind 24133 from \(relayURL)")
-        print("[NIP46]   Sender: \(senderPubkey.prefix(16))...")
+        print("[NIP46]   Event ID: \(eventId.prefix(16))...")
+        print("[NIP46]   Sender pubkey: \(senderPubkey)")
+        print("[NIP46]   p-tags: \(pTags)")
+        print("[NIP46]   Our signer pubkey: \(signerPubkeyHex ?? "nil")")
         print("[NIP46]   Content length: \(encryptedContent.count) chars")
 
         // Find the session for this client
@@ -354,6 +368,41 @@ final class NIP46Service: ObservableObject {
         do {
             // 1. Decrypt and parse request — auto-detect NIP-44 vs NIP-04
             print("[NIP46] Decrypting request from \(session.displayName)...")
+
+            // ── Debug: raw content inspection ──
+            print("[NIP46]   Raw content (first 80 chars): \(encryptedContent.prefix(80))")
+            print("[NIP46]   Raw content length: \(encryptedContent.count)")
+
+            // Check for NIP-44 version byte by decoding base64
+            if let decoded = Data(base64Encoded: encryptedContent) {
+                let versionByte = decoded.first.map { String(format: "0x%02x", $0) } ?? "nil"
+                print("[NIP46]   Base64 decoded OK, length: \(decoded.count), version byte: \(versionByte)")
+                if decoded.count >= 4 {
+                    let firstBytes = decoded.prefix(4).map { String(format: "%02x", $0) }.joined()
+                    print("[NIP46]   First 4 bytes: \(firstBytes)")
+                }
+            } else {
+                print("[NIP46]   NOT valid base64 (probably NIP-04 format)")
+            }
+
+            // ── Debug: key identity for decryption ──
+            let convKeyHex = session.conversationKey.withUnsafeBytes { Data($0).prefix(8).map { String(format: "%02x", $0) }.joined() }
+            print("[NIP46]   Session conversation key (first 8 bytes): \(convKeyHex)")
+            if let privKey = signerPrivateKey {
+                print("[NIP46]   Signer privkey for ECDH (first 4 bytes): \(privKey.prefix(4).map { String(format: "%02x", $0) }.joined())")
+                print("[NIP46]   Client pubkey for ECDH: \(session.clientPubkey.prefix(16))...")
+                // Re-derive conversation key to compare
+                if let clientPubkeyData = try? NostrKeyUtils.hexDecode(session.clientPubkey) {
+                    if let freshConvKey = try? NIP44.conversationKey(privateKey: privKey, publicKey: clientPubkeyData) {
+                        let freshHex = freshConvKey.withUnsafeBytes { Data($0).prefix(8).map { String(format: "%02x", $0) }.joined() }
+                        print("[NIP46]   Fresh conversation key (first 8 bytes): \(freshHex)")
+                        print("[NIP46]   Conv key match: \(convKeyHex == freshHex ? "YES" : "MISMATCH!")")
+                    }
+                }
+            } else {
+                print("[NIP46]   ⚠ No signer private key available for ECDH!")
+            }
+
             let request: NIP46Request
             let detectedEncryption: NIP46Encryption
 
@@ -587,6 +636,8 @@ final class NIP46Service: ObservableObject {
         }
 
         // Build unsigned event
+        print("[NIP46]   Outgoing event pubkey (signer): \(signerPubkey)")
+        print("[NIP46]   Outgoing event p-tag (client): \(toClientPubkey)")
         let unsigned = NostrEvent.unsigned(
             pubkey: signerPubkey,
             kind: 24133,

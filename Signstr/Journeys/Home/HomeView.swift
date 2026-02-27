@@ -20,7 +20,7 @@ enum NavigationRoutes: Hashable {
 // MARK: - Tab selection
 
 enum AppTab: Int, Hashable {
-    case sign
+    case connections
     case identity
     case settings
 }
@@ -29,8 +29,9 @@ enum AppTab: Int, Hashable {
 
 struct HomeView: View {
     @EnvironmentObject var cardState: CardState
+    @EnvironmentObject var nip46Service: NIP46Service
 
-    @State private var selectedTab: AppTab = .sign
+    @State private var selectedTab: AppTab = .connections
 
     private func needsOnboarding() -> Bool {
         return !UserDefaults.standard.bool(forKey: Constants.Keys.onboardingComplete)
@@ -43,11 +44,11 @@ struct HomeView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            SignTabView()
-                .tag(AppTab.sign)
+            ConnectionsTabView()
+                .tag(AppTab.connections)
                 .tabItem {
-                    Image(systemName: "signature")
-                    Text("Sign")
+                    Image(systemName: "link")
+                    Text("Connections")
                 }
 
             IdentityTabView()

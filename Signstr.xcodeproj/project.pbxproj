@@ -84,13 +84,19 @@
 		BB00004200000042000000F2 /* KeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00004300000043000000F3 /* KeyManager.swift */; };
 		BB00004400000044000000F4 /* SoftwareSigner.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00004500000045000000F5 /* SoftwareSigner.swift */; };
 		BB00004600000046000000F6 /* KeyStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00004700000047000000F7 /* KeyStorageTests.swift */; };
-		CC00000200000002000000A2 /* SignTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000001000000A1 /* SignTabView.swift */; };
 		CC00000400000004000000A4 /* IdentityTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000300000003000000A3 /* IdentityTabView.swift */; };
 		CC00000600000006000000A6 /* SettingsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000500000005000000A5 /* SettingsTabView.swift */; };
 		A1B2C3D400000005000000B5 /* KeySetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D400000001000000B1 /* KeySetupView.swift */; };
 		A1B2C3D400000006000000B6 /* GenerateKeyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D400000002000000B2 /* GenerateKeyView.swift */; };
 		A1B2C3D400000007000000B7 /* ImportNsecView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D400000003000000B3 /* ImportNsecView.swift */; };
 		A1B2C3D400000008000000B8 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D400000004000000B4 /* QRScannerView.swift */; };
+		DD00001100000011000000B1 /* NIP44.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000100000001000000A1 /* NIP44.swift */; };
+		DD00001200000012000000B2 /* NIP46ConnectionParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000002000000A2 /* NIP46ConnectionParser.swift */; };
+		DD00001300000013000000B3 /* NIP46Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000300000003000000A3 /* NIP46Session.swift */; };
+		DD00001400000014000000B4 /* NIP46MessageHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000400000004000000A4 /* NIP46MessageHandler.swift */; };
+		DD00001500000015000000B5 /* NIP46Service.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000500000005000000A5 /* NIP46Service.swift */; };
+		DD00001600000016000000B6 /* ConnectionsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000600000006000000A6 /* ConnectionsTabView.swift */; };
+		DD00001700000017000000B7 /* NIP46Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000700000007000000A7 /* NIP46Tests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -190,13 +196,19 @@
 		BB00004300000043000000F3 /* KeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyManager.swift; sourceTree = "<group>"; };
 		BB00004500000045000000F5 /* SoftwareSigner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoftwareSigner.swift; sourceTree = "<group>"; };
 		BB00004700000047000000F7 /* KeyStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyStorageTests.swift; sourceTree = "<group>"; };
-		CC00000100000001000000A1 /* SignTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignTabView.swift; sourceTree = "<group>"; };
 		CC00000300000003000000A3 /* IdentityTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentityTabView.swift; sourceTree = "<group>"; };
 		CC00000500000005000000A5 /* SettingsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTabView.swift; sourceTree = "<group>"; };
 		A1B2C3D400000001000000B1 /* KeySetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeySetupView.swift; sourceTree = "<group>"; };
 		A1B2C3D400000002000000B2 /* GenerateKeyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateKeyView.swift; sourceTree = "<group>"; };
 		A1B2C3D400000003000000B3 /* ImportNsecView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportNsecView.swift; sourceTree = "<group>"; };
 		A1B2C3D400000004000000B4 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
+		DD00000100000001000000A1 /* NIP44.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP44.swift; sourceTree = "<group>"; };
+		DD00000200000002000000A2 /* NIP46ConnectionParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP46ConnectionParser.swift; sourceTree = "<group>"; };
+		DD00000300000003000000A3 /* NIP46Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP46Session.swift; sourceTree = "<group>"; };
+		DD00000400000004000000A4 /* NIP46MessageHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP46MessageHandler.swift; sourceTree = "<group>"; };
+		DD00000500000005000000A5 /* NIP46Service.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP46Service.swift; sourceTree = "<group>"; };
+		DD00000600000006000000A6 /* ConnectionsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionsTabView.swift; sourceTree = "<group>"; };
+		DD00000700000007000000A7 /* NIP46Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP46Tests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -323,6 +335,7 @@
 			children = (
 				D05EB84A2BFE4E73006B84BB /* Card */,
 				BB00002100000021000000D1 /* Nostr */,
+				DD00002000000020000000C0 /* NIP46 */,
 				D07141582BF255B100A4939A /* Repositories */,
 				D07141552BF2532100A4939A /* Models */,
 				D03110962BE4178D00ED0997 /* Helpers */,
@@ -354,6 +367,7 @@
 				D0BA414E2BCFDDF300FD25B9 /* SignstrTests.swift */,
 				BB00003100000031000000E1 /* NostrLogicTests.swift */,
 				BB00004700000047000000F7 /* KeyStorageTests.swift */,
+				DD00000700000007000000A7 /* NIP46Tests.swift */,
 			);
 			path = SignstrTests;
 			sourceTree = "<group>";
@@ -404,7 +418,7 @@
 				D0C939D02BD685F900F2A17B /* Pin */,
 				D0E433A12BD40B48008DBAA6 /* Menu */,
 				D0E4337D2BD3F9C7008DBAA6 /* Home */,
-				CC00000700000007000000A7 /* Sign */,
+				DD00002100000021000000C1 /* Connections */,
 				CC00000800000008000000A8 /* Identity */,
 			);
 			path = Journeys;
@@ -499,15 +513,7 @@
 			path = Nostr;
 			sourceTree = "<group>";
 		};
-		CC00000700000007000000A7 /* Sign */ = {
-			isa = PBXGroup;
-			children = (
-				CC00000100000001000000A1 /* SignTabView.swift */,
-			);
-			path = Sign;
-			sourceTree = "<group>";
-		};
-		CC00000800000008000000A8 /* Identity */ = {
+				CC00000800000008000000A8 /* Identity */ = {
 			isa = PBXGroup;
 			children = (
 				CC00000300000003000000A3 /* IdentityTabView.swift */,
@@ -517,6 +523,26 @@
 				A1B2C3D400000004000000B4 /* QRScannerView.swift */,
 			);
 			path = Identity;
+			sourceTree = "<group>";
+		};
+		DD00002000000020000000C0 /* NIP46 */ = {
+			isa = PBXGroup;
+			children = (
+				DD00000100000001000000A1 /* NIP44.swift */,
+				DD00000200000002000000A2 /* NIP46ConnectionParser.swift */,
+				DD00000300000003000000A3 /* NIP46Session.swift */,
+				DD00000400000004000000A4 /* NIP46MessageHandler.swift */,
+				DD00000500000005000000A5 /* NIP46Service.swift */,
+			);
+			path = NIP46;
+			sourceTree = "<group>";
+		};
+		DD00002100000021000000C1 /* Connections */ = {
+			isa = PBXGroup;
+			children = (
+				DD00000600000006000000A6 /* ConnectionsTabView.swift */,
+			);
+			path = Connections;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -686,6 +712,12 @@
 				BB00004000000040000000F0 /* SecureEnclaveKeyStore.swift in Sources */,
 				BB00004200000042000000F2 /* KeyManager.swift in Sources */,
 				BB00004400000044000000F4 /* SoftwareSigner.swift in Sources */,
+				DD00001100000011000000B1 /* NIP44.swift in Sources */,
+				DD00001200000012000000B2 /* NIP46ConnectionParser.swift in Sources */,
+				DD00001300000013000000B3 /* NIP46Session.swift in Sources */,
+				DD00001400000014000000B4 /* NIP46MessageHandler.swift in Sources */,
+				DD00001500000015000000B5 /* NIP46Service.swift in Sources */,
+				DD00001600000016000000B6 /* ConnectionsTabView.swift in Sources */,
 				D071416C2BF272F300A4939A /* CardInfoBox.swift in Sources */,
 				D0339C422C0F4020002DF8FB /* PasswordGeneratorBox.swift in Sources */,
 				D0E433A02BD4088E008DBAA6 /* Colors.swift in Sources */,
@@ -726,7 +758,6 @@
 				D0E4339C2BD3FDD0008DBAA6 /* EmptyScanStateOverlay.swift in Sources */,
 				D03540172C04D80C00ABF9C7 /* BackupWizardView.swift in Sources */,
 				E5DAFFE30C1C47B884ABEC76 /* SplashView.swift in Sources */,
-				CC00000200000002000000A2 /* SignTabView.swift in Sources */,
 				CC00000400000004000000A4 /* IdentityTabView.swift in Sources */,
 				A1B2C3D400000005000000B5 /* KeySetupView.swift in Sources */,
 				A1B2C3D400000006000000B6 /* GenerateKeyView.swift in Sources */,
@@ -760,6 +791,7 @@
 				D0BA414F2BCFDDF300FD25B9 /* SignstrTests.swift in Sources */,
 				BB00003000000030000000E0 /* NostrLogicTests.swift in Sources */,
 				BB00004600000046000000F6 /* KeyStorageTests.swift in Sources */,
+				DD00001700000017000000B7 /* NIP46Tests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

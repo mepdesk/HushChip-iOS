@@ -16,6 +16,7 @@ struct SignstrApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @StateObject private var dataController = DataController.shared
     @StateObject var cardState = CardState()
+    @StateObject var nip46Service = NIP46Service(signer: SoftwareSigner())
     @State private var showSplash = true
 
     var body: some Scene {
@@ -24,6 +25,7 @@ struct SignstrApp: App {
                 HomeView()
                     .environment(\.managedObjectContext, dataController.container.viewContext)
                     .environmentObject(cardState)
+                    .environmentObject(nip46Service)
                     .preferredColorScheme(.dark)
                     .background(Color.sgBg.ignoresSafeArea())
                     .opacity(showSplash ? 0 : 1)

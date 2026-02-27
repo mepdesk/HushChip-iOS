@@ -101,7 +101,7 @@ struct OnboardingInfoView: View {
             Spacer().frame(height: 44)
 
             // ── Heading ─────────────────────────────────────────────
-            Text("Sign events. Never paste your nsec again.")
+            Text("Connect your favourite clients.")
                 .font(.outfit(.light, size: 20))
                 .tracking(0.3)
                 .foregroundColor(.sgTextBright)
@@ -111,7 +111,7 @@ struct OnboardingInfoView: View {
             Spacer().frame(height: 16)
 
             // ── Body ────────────────────────────────────────────────
-            Text("Approve Nostr events from any client. Your key signs locally — nothing is shared.")
+            Text("Damus, Primal, and other Nostr clients can request signatures without ever seeing your nsec.")
                 .font(.outfit(.light, size: 13))
                 .foregroundColor(.sgTextMuted)
                 .multilineTextAlignment(.center)

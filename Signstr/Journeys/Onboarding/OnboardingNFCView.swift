@@ -133,7 +133,7 @@ struct OnboardingNFCView: View {
             Spacer().frame(height: 44)
 
             // ── Heading ─────────────────────────────────────────────
-            Text("Face ID protects every signature.")
+            Text("Face ID approves every signature.")
                 .font(.outfit(.light, size: 20))
                 .tracking(0.3)
                 .foregroundColor(.sgTextBright)
@@ -143,7 +143,7 @@ struct OnboardingNFCView: View {
             Spacer().frame(height: 24)
 
             // ── Info box ────────────────────────────────────────────
-            Text("Every time you sign an event, Face ID confirms it's really you. Your key is never exposed.")
+            Text("Set approval policies per app. Always ask, trust for a session, or auto-approve by event kind. You stay in control.")
                 .font(.outfit(.light, size: 12))
                 .foregroundColor(.sgTextMuted)
                 .multilineTextAlignment(.center)

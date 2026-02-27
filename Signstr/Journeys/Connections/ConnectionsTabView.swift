@@ -184,8 +184,7 @@ struct ConnectionsTabView: View {
                     .tracking(4)
             }
             .foregroundColor(.sgTextBright)
-            .frame(maxWidth: .infinity)
-            .frame(height: 50)
+            .frame(width: 220, height: 50)
             .background(Color.sgBorder)
             .cornerRadius(Dimensions.buttonCornerRadius)
             .overlay(

@@ -32,6 +32,8 @@ struct HomeView: View {
     @EnvironmentObject var nip46Service: NIP46Service
 
     @State private var selectedTab: AppTab = .connections
+    @State private var showOnboarding = false
+    @State private var showKeySetup = false
 
     private func needsOnboarding() -> Bool {
         return !UserDefaults.standard.bool(forKey: Constants.Keys.onboardingComplete)
@@ -87,13 +89,39 @@ struct HomeView: View {
             UITabBar.appearance().scrollEdgeAppearance = appearance
 
             if needsOnboarding() {
-                // Show onboarding first; it chains to key setup
-                cardState.homeNavigationPath.append(NavigationRoutes.onboarding)
-                selectedTab = .settings
+                showOnboarding = true
             } else if needsKeySetup() {
-                // Onboarding done but no key yet
-                cardState.homeNavigationPath.append(NavigationRoutes.keySetup)
-                selectedTab = .settings
+                showKeySetup = true
+            }
+        }
+        .fullScreenCover(isPresented: $showOnboarding) {
+            OnboardingContainerView(onComplete: {
+                showOnboarding = false
+                if needsKeySetup() {
+                    showKeySetup = true
+                }
+            })
+            .environmentObject(cardState)
+        }
+        .fullScreenCover(isPresented: $showKeySetup) {
+            NavigationStack(path: $cardState.homeNavigationPath) {
+                KeySetupView()
+                    .navigationDestination(for: NavigationRoutes.self) { route in
+                        switch route {
+                        case .generateKey: GenerateKeyView()
+                        case .importNsec: ImportNsecView()
+                        default: EmptyView()
+                        }
+                    }
+            }
+            .environmentObject(cardState)
+            .environmentObject(nip46Service)
+            .preferredColorScheme(.dark)
+            .onChange(of: cardState.homeNavigationPath) { newPath in
+                // GenerateKeyView/ImportNsecView clear the path after saving the key
+                if newPath.isEmpty && KeyManager.keyExists() {
+                    showKeySetup = false
+                }
             }
         }
     }

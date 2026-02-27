@@ -105,7 +105,7 @@ struct OnboardingWelcomeView: View {
             Spacer().frame(height: 16)
 
             // ── Body ────────────────────────────────────────────────
-            Text("Signstr keeps your private key locked in the Secure Enclave. It never leaves your device.")
+            Text("Signstr keeps your nsec encrypted in one place. No more pasting it into every app.")
                 .font(.outfit(.light, size: 13))
                 .foregroundColor(.sgTextMuted)
                 .multilineTextAlignment(.center)

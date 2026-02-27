@@ -38,7 +38,7 @@ struct SettingsTabView: View {
             .navigationDestination(for: NavigationRoutes.self) { route in
                 switch route {
                 case .onboarding:
-                    OnboardingContainerView()
+                    OnboardingContainerView(onComplete: {})
                 case .keySetup:
                     KeySetupView()
                 case .generateKey:

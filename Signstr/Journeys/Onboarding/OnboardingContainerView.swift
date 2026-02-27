@@ -18,15 +18,16 @@ import SwiftUI
 struct OnboardingContainerView: View {
     @EnvironmentObject var cardState: CardState
 
+    /// Called when the user taps "GET STARTED" on the last page.
+    var onComplete: () -> Void
+
     @State private var currentPage = 0
 
     private let pageCount = 3
 
-    // Called when the user taps "GET STARTED" on the last page.
-    func completeOnboarding() {
+    private func completeOnboarding() {
         UserDefaults.standard.set(true, forKey: Constants.Keys.onboardingComplete)
-        // Navigate to key setup
-        cardState.homeNavigationPath.append(NavigationRoutes.keySetup)
+        onComplete()
     }
 
     // MARK: - Body

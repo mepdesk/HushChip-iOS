@@ -172,7 +172,7 @@ struct IdentityTabView: View {
 
     private func copyButton(npub: String) -> some View {
         Button(action: {
-            ClipboardManager.shared.copy(npub)
+            UIPasteboard.general.string = npub
             let generator = UIImpactFeedbackGenerator(style: .medium)
             generator.impactOccurred()
             showCopiedFeedback = true

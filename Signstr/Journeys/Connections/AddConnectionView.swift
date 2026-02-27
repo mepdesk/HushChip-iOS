@@ -82,18 +82,18 @@ struct AddConnectionView: View {
 
                 Spacer()
 
-                // Scan frame
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.sgBorderHover, lineWidth: 2)
-                    .frame(width: 240, height: 240)
+                // Scan frame (centred in the space above controls)
+                VStack(spacing: 24) {
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.sgBorderHover, lineWidth: 2)
+                        .frame(width: 240, height: 240)
 
-                Spacer().frame(height: 24)
+                    Text("Scan a Nostr Connect QR code")
+                        .font(.outfit(.light, size: 14))
+                        .foregroundColor(.sgTextMuted)
+                }
 
-                Text("Scan a Nostr Connect QR code")
-                    .font(.outfit(.light, size: 14))
-                    .foregroundColor(.sgTextMuted)
-
-                Spacer().frame(height: 24)
+                Spacer()
 
                 // Paste toggle
                 if showPasteField {

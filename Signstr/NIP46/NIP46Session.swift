@@ -12,6 +12,14 @@
 import CryptoKit
 import Foundation
 
+/// Which encryption scheme a NIP-46 client uses for kind 24133 communication.
+enum NIP46Encryption: String, Sendable {
+    /// NIP-04: ECDH + AES-256-CBC, format `base64(ct)?iv=base64(iv)`.
+    case nip04
+    /// NIP-44: Versioned envelope with ChaCha20 + HMAC-SHA256.
+    case nip44
+}
+
 /// A single NIP-46 client connection.
 ///
 /// Each session represents one remote Nostr client (e.g. Damus, Primal) that has
@@ -45,6 +53,12 @@ final class NIP46Session: Identifiable, Hashable, Sendable {
 
     /// Permissions granted to this client (nil = ask for everything).
     let permissions: String?
+
+    /// Detected encryption preference for this client.
+    /// Defaults to `.nip04` (most clients). Updated when the first incoming request
+    /// is successfully decrypted, so subsequent responses match the client's format.
+    /// Only mutated from @MainActor NIP46Service.
+    nonisolated(unsafe) var encryptionPreference: NIP46Encryption = .nip04
 
     init(
         id: UUID = UUID(),

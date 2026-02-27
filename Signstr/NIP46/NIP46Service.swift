@@ -352,29 +352,73 @@ final class NIP46Service: ObservableObject {
         relayURL: String
     ) async {
         do {
-            // 1. Decrypt and parse request (try NIP-44 first, then NIP-04 fallback)
+            // 1. Decrypt and parse request — auto-detect NIP-44 vs NIP-04
             print("[NIP46] Decrypting request from \(session.displayName)...")
             let request: NIP46Request
-            do {
-                request = try NIP46MessageHandler.decryptRequest(
-                    payload: encryptedContent,
-                    conversationKey: session.conversationKey
-                )
-                print("[NIP46]   Decrypted with NIP-44")
-            } catch {
-                print("[NIP46]   NIP-44 decryption failed (\(error)), trying NIP-04...")
-                guard let privKey = signerPrivateKey else {
-                    throw error
+            let detectedEncryption: NIP46Encryption
+
+            // Heuristic: NIP-04 payloads contain "?iv=" with base64;
+            // NIP-44 payloads are pure base64 with a version byte prefix.
+            let looksLikeNIP04 = encryptedContent.contains("?iv=")
+
+            if looksLikeNIP04 {
+                // Try NIP-04 first, fall back to NIP-44
+                print("[NIP46]   Content contains '?iv=' — trying NIP-04 first...")
+                do {
+                    guard let privKey = signerPrivateKey else {
+                        throw NIP04.NIP04Error.ecdhFailed
+                    }
+                    let clientPubkeyData = try NostrKeyUtils.hexDecode(session.clientPubkey)
+                    let json = try NIP04.decrypt(
+                        payload: encryptedContent,
+                        privateKey: privKey,
+                        publicKey: clientPubkeyData
+                    )
+                    request = try NIP46MessageHandler.parseRequest(json)
+                    detectedEncryption = .nip04
+                    print("[NIP46]   Decrypted with NIP-04")
+                } catch {
+                    print("[NIP46]   NIP-04 failed (\(error)), trying NIP-44...")
+                    request = try NIP46MessageHandler.decryptRequest(
+                        payload: encryptedContent,
+                        conversationKey: session.conversationKey
+                    )
+                    detectedEncryption = .nip44
+                    print("[NIP46]   Decrypted with NIP-44 (fallback)")
                 }
-                let clientPubkeyData = try NostrKeyUtils.hexDecode(session.clientPubkey)
-                let json = try NIP04.decrypt(
-                    payload: encryptedContent,
-                    privateKey: privKey,
-                    publicKey: clientPubkeyData
-                )
-                print("[NIP46]   Decrypted with NIP-04: \(json.prefix(100))")
-                request = try NIP46MessageHandler.parseRequest(json)
+            } else {
+                // Try NIP-44 first, fall back to NIP-04
+                print("[NIP46]   No '?iv=' marker — trying NIP-44 first...")
+                do {
+                    request = try NIP46MessageHandler.decryptRequest(
+                        payload: encryptedContent,
+                        conversationKey: session.conversationKey
+                    )
+                    detectedEncryption = .nip44
+                    print("[NIP46]   Decrypted with NIP-44")
+                } catch {
+                    print("[NIP46]   NIP-44 failed (\(error)), trying NIP-04...")
+                    guard let privKey = signerPrivateKey else {
+                        throw error
+                    }
+                    let clientPubkeyData = try NostrKeyUtils.hexDecode(session.clientPubkey)
+                    let json = try NIP04.decrypt(
+                        payload: encryptedContent,
+                        privateKey: privKey,
+                        publicKey: clientPubkeyData
+                    )
+                    request = try NIP46MessageHandler.parseRequest(json)
+                    detectedEncryption = .nip04
+                    print("[NIP46]   Decrypted with NIP-04 (fallback)")
+                }
             }
+
+            // Update session encryption preference to match what the client sent
+            if session.encryptionPreference != detectedEncryption {
+                print("[NIP46]   Updating session encryption: \(session.encryptionPreference.rawValue) → \(detectedEncryption.rawValue)")
+                session.encryptionPreference = detectedEncryption
+            }
+            print("[NIP46]   Session encryption: \(session.encryptionPreference.rawValue)")
             print("[NIP46]   Method: \(request.method)")
             print("[NIP46]   Request ID: \(request.id)")
             print("[NIP46]   Params count: \(request.params.count)")
@@ -420,15 +464,12 @@ final class NIP46Service: ObservableObject {
                 }
 
                 guard approved else {
-                    // Send rejection response
+                    // Send rejection response using the same encryption the client used
                     let response = NIP46Response.error(
                         id: request.id,
                         message: "User rejected the signing request"
                     )
-                    let encrypted = try NIP46MessageHandler.encryptResponse(
-                        response,
-                        conversationKey: session.conversationKey
-                    )
+                    let encrypted = try encryptForSession(response, session: session)
                     try await sendResponse(
                         encryptedContent: encrypted,
                         toClientPubkey: session.clientPubkey,
@@ -447,13 +488,8 @@ final class NIP46Service: ObservableObject {
             )
             print("[NIP46]   Response: result=\(response.result?.prefix(80) ?? "nil") error=\(response.error ?? "nil")")
 
-            // 4. Encrypt response
-            print("[NIP46] Encrypting response...")
-            let encryptedResponse = try NIP46MessageHandler.encryptResponse(
-                response,
-                conversationKey: session.conversationKey
-            )
-            print("[NIP46]   Encrypted response length: \(encryptedResponse.count) chars")
+            // 4. Encrypt response using the session's detected encryption preference
+            let encryptedResponse = try encryptForSession(response, session: session)
 
             // 5. Build and send response event
             print("[NIP46] Sending response event to \(relayURL)...")
@@ -465,6 +501,45 @@ final class NIP46Service: ObservableObject {
             print("[NIP46] ✓ Response sent for \(request.method) (id: \(request.id))")
         } catch {
             print("[NIP46] ✗ Error processing request: \(error)")
+        }
+    }
+
+    // MARK: - Encryption helpers
+
+    /// Encrypts a NIP-46 response using the session's detected encryption preference.
+    private func encryptForSession(
+        _ response: NIP46Response,
+        session: NIP46Session
+    ) throws -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        let jsonData = try encoder.encode(response)
+        guard let jsonString = String(data: jsonData, encoding: .utf8) else {
+            throw NIP46MessageHandler.HandlerError.invalidJSON
+        }
+
+        switch session.encryptionPreference {
+        case .nip04:
+            guard let privKey = signerPrivateKey else {
+                print("[NIP46] ⚠ No private key for NIP-04 encryption, falling back to NIP-44")
+                return try NIP44.encrypt(plaintext: jsonString, conversationKey: session.conversationKey)
+            }
+            let clientPubkeyData = try NostrKeyUtils.hexDecode(session.clientPubkey)
+            let encrypted = try NIP04.encrypt(
+                plaintext: jsonString,
+                privateKey: privKey,
+                publicKey: clientPubkeyData
+            )
+            print("[NIP46]   Encrypted response with NIP-04 (\(encrypted.count) chars)")
+            return encrypted
+
+        case .nip44:
+            let encrypted = try NIP44.encrypt(
+                plaintext: jsonString,
+                conversationKey: session.conversationKey
+            )
+            print("[NIP46]   Encrypted response with NIP-44 (\(encrypted.count) chars)")
+            return encrypted
         }
     }
 

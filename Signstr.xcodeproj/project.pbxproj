@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		EE00000200000002000000E2 /* ApprovalPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000100000001000000E1 /* ApprovalPolicy.swift */; };
+		EE00000400000004000000E4 /* SigningLogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000300000003000000E3 /* SigningLogStore.swift */; };
+		EE00000600000006000000E6 /* AppSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000500000005000000E5 /* AppSettingsView.swift */; };
+		EE00000800000008000000E8 /* EventLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000700000007000000E7 /* EventLogView.swift */; };
+		EE00001000000010000000F0 /* BackUpKeyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000900000009000000E9 /* BackUpKeyView.swift */; };
+		EE00001200000012000000F2 /* EmergencyExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00001100000011000000F1 /* EmergencyExportView.swift */; };
 		AA00000200000002000000A2 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000100000001000000A1 /* AboutView.swift */; };
 		AA10CB020000000200000002 /* ClipboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10CB010000000100000001 /* ClipboardManager.swift */; };
 		AA10CB040000000400000004 /* ClipboardToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10CB030000000300000003 /* ClipboardToast.swift */; };
@@ -119,6 +125,12 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		EE00000100000001000000E1 /* ApprovalPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalPolicy.swift; sourceTree = "<group>"; };
+		EE00000300000003000000E3 /* SigningLogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SigningLogStore.swift; sourceTree = "<group>"; };
+		EE00000500000005000000E5 /* AppSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettingsView.swift; sourceTree = "<group>"; };
+		EE00000700000007000000E7 /* EventLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventLogView.swift; sourceTree = "<group>"; };
+		EE00000900000009000000E9 /* BackUpKeyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackUpKeyView.swift; sourceTree = "<group>"; };
+		EE00001100000011000000F1 /* EmergencyExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmergencyExportView.swift; sourceTree = "<group>"; };
 		83CB38F9386046D5AC64D266 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
 		AA00000100000001000000A1 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		AA10CB010000000100000001 /* ClipboardManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardManager.swift; sourceTree = "<group>"; };
@@ -494,6 +506,7 @@
 				D0E433A42BD423B0008DBAA6 /* SettingsView.swift */,
 				D03110942BE40D2400ED0997 /* LogsView.swift */,
 				AA00000100000001000000A1 /* AboutView.swift */,
+				EE00001100000011000000F1 /* EmergencyExportView.swift */,
 			);
 			path = Menu;
 			sourceTree = "<group>";
@@ -525,6 +538,7 @@
 				A1B2C3D400000002000000B2 /* GenerateKeyView.swift */,
 				A1B2C3D400000003000000B3 /* ImportNsecView.swift */,
 				A1B2C3D400000004000000B4 /* QRScannerView.swift */,
+				EE00000900000009000000E9 /* BackUpKeyView.swift */,
 			);
 			path = Identity;
 			sourceTree = "<group>";
@@ -537,6 +551,8 @@
 				DD00000300000003000000A3 /* NIP46Session.swift */,
 				DD00000400000004000000A4 /* NIP46MessageHandler.swift */,
 				DD00000500000005000000A5 /* NIP46Service.swift */,
+				EE00000100000001000000E1 /* ApprovalPolicy.swift */,
+				EE00000300000003000000E3 /* SigningLogStore.swift */,
 			);
 			path = NIP46;
 			sourceTree = "<group>";
@@ -547,6 +563,8 @@
 				DD00000600000006000000A6 /* ConnectionsTabView.swift */,
 				1AE442E835C079EB716BA511 /* AddConnectionView.swift */,
 				A09BFBE517A0FFAC2B24FC82 /* SigningRequestView.swift */,
+				EE00000500000005000000E5 /* AppSettingsView.swift */,
+				EE00000700000007000000E7 /* EventLogView.swift */,
 			);
 			path = Connections;
 			sourceTree = "<group>";
@@ -789,6 +807,12 @@
 				D0F727B02C2B144200C05DB4 /* AppDelegate.swift in Sources */,
 				A538B28FADB0ECDC417F7D59 /* AddConnectionView.swift in Sources */,
 				381409E49B4616CC25797878 /* SigningRequestView.swift in Sources */,
+				EE00000200000002000000E2 /* ApprovalPolicy.swift in Sources */,
+				EE00000400000004000000E4 /* SigningLogStore.swift in Sources */,
+				EE00000600000006000000E6 /* AppSettingsView.swift in Sources */,
+				EE00000800000008000000E8 /* EventLogView.swift in Sources */,
+				EE00001000000010000000F0 /* BackUpKeyView.swift in Sources */,
+				EE00001200000012000000F2 /* EmergencyExportView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

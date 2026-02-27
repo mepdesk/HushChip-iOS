@@ -223,12 +223,45 @@ final class NIP46Service: ObservableObject {
                 conversationKey: session.conversationKey
             )
 
-            // 2. For sign_event, require user approval before proceeding
+            // 2. For sign_event, check approval policy before prompting
             if request.method == "sign_event" {
-                let approved = await requestUserApproval(
-                    for: request,
-                    session: session
+                // Parse event details for logging
+                var eventKind = 0
+                var eventContent = ""
+                if let eventJSON = request.params.first,
+                   let data = eventJSON.data(using: .utf8),
+                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    eventKind = dict["kind"] as? Int ?? 0
+                    eventContent = dict["content"] as? String ?? ""
+                }
+
+                let autoApprove = ApprovalPolicyStore.shouldAutoApprove(for: session.clientPubkey)
+
+                let approved: Bool
+                if autoApprove {
+                    approved = true
+                } else {
+                    approved = await requestUserApproval(
+                        for: request,
+                        session: session
+                    )
+                }
+
+                // Log the signing request
+                SigningLogStore.shared.log(
+                    appName: session.displayName,
+                    clientPubkey: session.clientPubkey,
+                    eventKind: eventKind,
+                    content: eventContent,
+                    approved: approved,
+                    eventJSON: request.params.first ?? ""
                 )
+
+                if approved {
+                    // Record first approval for timed trust policies
+                    ApprovalPolicyStore.recordFirstApproval(for: session.clientPubkey)
+                }
+
                 guard approved else {
                     // Send rejection response
                     let response = NIP46Response.error(

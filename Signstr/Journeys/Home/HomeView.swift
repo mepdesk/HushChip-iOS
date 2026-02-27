@@ -13,7 +13,10 @@ enum NavigationRoutes: Hashable {
     case keySetup
     case generateKey
     case importNsec
+    case backUpKey
     case logs
+    case eventLog
+    case emergencyExport
     case about
 }
 

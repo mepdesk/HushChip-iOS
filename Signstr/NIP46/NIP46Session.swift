@@ -16,7 +16,15 @@ import Foundation
 ///
 /// Each session represents one remote Nostr client (e.g. Damus, Primal) that has
 /// connected to Signstr and can send signing requests.
-final class NIP46Session: Identifiable, Sendable {
+final class NIP46Session: Identifiable, Hashable, Sendable {
+    static func == (lhs: NIP46Session, rhs: NIP46Session) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
     /// Unique session identifier.
     let id: UUID
 

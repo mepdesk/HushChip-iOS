@@ -19,6 +19,7 @@ struct ImportNsecView: View {
     @State private var errorMessage: String?
     @State private var importedNpub: String?
     @State private var showQRScanner = false
+    @State private var showBackup = false
 
     @FocusState private var inputFocused: Bool
 
@@ -59,6 +60,15 @@ struct ImportNsecView: View {
                 showQRScanner = false
                 nsecInput = scannedValue
             }
+        }
+        .fullScreenCover(isPresented: $showBackup) {
+            NavigationStack {
+                BackUpKeyView(isPostSetup: true) {
+                    showBackup = false
+                    completeSetup()
+                }
+            }
+            .preferredColorScheme(.dark)
         }
     }
 
@@ -285,8 +295,8 @@ struct ImportNsecView: View {
 
             Spacer().frame(height: 40)
 
-            Button(action: completeSetup) {
-                Text("CONTINUE")
+            Button(action: { showBackup = true }) {
+                Text("BACK UP YOUR KEY")
                     .font(.outfit(.regular, size: 11))
                     .tracking(4)
                     .foregroundColor(.sgTextBright)

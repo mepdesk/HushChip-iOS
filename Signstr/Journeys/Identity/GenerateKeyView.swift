@@ -22,6 +22,7 @@ struct GenerateKeyView: View {
     }
 
     @State private var state: GenerateState = .ready
+    @State private var showBackup = false
 
     var body: some View {
         ZStack {
@@ -64,6 +65,15 @@ struct GenerateKeyView: View {
             }
         }
         .navigationBarBackButtonHidden(true)
+        .fullScreenCover(isPresented: $showBackup) {
+            NavigationStack {
+                BackUpKeyView(isPostSetup: true) {
+                    showBackup = false
+                    completeSetup()
+                }
+            }
+            .preferredColorScheme(.dark)
+        }
     }
 
     // MARK: - Ready state
@@ -197,8 +207,8 @@ struct GenerateKeyView: View {
 
             Spacer().frame(height: 40)
 
-            Button(action: completeSetup) {
-                Text("CONTINUE")
+            Button(action: { showBackup = true }) {
+                Text("BACK UP YOUR KEY")
                     .font(.outfit(.regular, size: 11))
                     .tracking(4)
                     .foregroundColor(.sgTextBright)

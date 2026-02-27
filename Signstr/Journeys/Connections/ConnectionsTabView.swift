@@ -15,6 +15,7 @@ struct ConnectionsTabView: View {
     @EnvironmentObject var nip46Service: NIP46Service
 
     @State private var showAddConnection = false
+    @State private var selectedSession: NIP46Session?
 
     var body: some View {
         ZStack {
@@ -38,6 +39,13 @@ struct ConnectionsTabView: View {
                 onApprove: { nip46Service.approvePendingRequest() },
                 onReject: { nip46Service.rejectPendingRequest() }
             )
+        }
+        .sheet(item: $selectedSession) { session in
+            NavigationStack {
+                AppSettingsView(session: session) {
+                    nip46Service.removeSession(clientPubkey: session.clientPubkey)
+                }
+            }
         }
     }
 
@@ -110,7 +118,9 @@ struct ConnectionsTabView: View {
                 Spacer().frame(height: 20)
 
                 ForEach(nip46Service.activeSessions) { session in
-                    sessionRow(session)
+                    Button(action: { selectedSession = session }) {
+                        sessionRow(session)
+                    }
 
                     if session.id != nip46Service.activeSessions.last?.id {
                         Rectangle()

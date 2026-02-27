@@ -38,10 +38,6 @@ struct SettingsTabView: View {
                             cardState.homeNavigationPath.append(NavigationRoutes.eventLog)
                         }
                         Spacer().frame(height: 8)
-                        settingsRow(icon: "key.viewfinder", title: "Back Up Key", subtitle: "Export your nsec securely") {
-                            cardState.homeNavigationPath.append(NavigationRoutes.backUpKey)
-                        }
-                        Spacer().frame(height: 8)
                         settingsRow(icon: "doc.text", title: "Debug Logs", subtitle: "View application logs") {
                             cardState.homeNavigationPath.append(NavigationRoutes.logs)
                         }
@@ -77,7 +73,7 @@ struct SettingsTabView: View {
                 case .importNsec:
                     ImportNsecView()
                 case .backUpKey:
-                    BackUpKeyView(isPostSetup: false)
+                    EmptyView() // Only accessible in post-key-setup flow
                 case .logs:
                     LogsView(homeNavigationPath: $cardState.homeNavigationPath)
                 case .eventLog:

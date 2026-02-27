@@ -23,6 +23,8 @@
 		<key>UIColorName</key>
 		<string>LaunchScreenBackground</string>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Signstr uses the camera to scan QR codes for importing your Nostr private key.</string>
 	<key>NFCReaderUsageDescription</key>
 	<string>Signstr uses NFC to communicate with your smart card.</string>
 	<key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>

@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Gridmark Technologies Ltd (Signstr)
-// https://github.com/hushchip/Signstr-iOS
+// https://github.com/signstr/Signstr-iOS
 //
 // Based on Seedkeeper-iOS by Toporin / Satochip S.R.L.
 // https://github.com/Toporin/Seedkeeper-iOS
@@ -10,10 +10,78 @@
 // (at your option) any later version.
 //
 //  OnBoardingWelcomeView.swift
-//  Signstr — Onboarding Screen 1: "Your secrets. On a chip."
+//  Signstr — Onboarding Screen 1: "Your Nostr identity. Secured."
 
 import Foundation
 import SwiftUI
+
+// MARK: - Shield illustration
+
+/// A shield with a key silhouette inside, representing identity security.
+private struct ShieldIllustration: View {
+
+    var body: some View {
+        ZStack {
+            // Shield outline
+            ShieldShape()
+                .fill(Color.sgBgRaised)
+                .overlay(
+                    ShieldShape()
+                        .stroke(Color.sgBorderHover, lineWidth: 1.5)
+                )
+                .frame(width: 100, height: 120)
+
+            // Key icon inside shield
+            Image(systemName: "key.fill")
+                .font(.system(size: 36, weight: .ultraLight))
+                .foregroundColor(.sgBorderHover)
+                .rotationEffect(.degrees(-45))
+                .offset(y: -4)
+        }
+        .frame(width: 140, height: 140)
+    }
+}
+
+/// Custom shield shape.
+private struct ShieldShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let w = rect.width
+        let h = rect.height
+        let cx = rect.midX
+
+        // Top left corner
+        path.move(to: CGPoint(x: cx, y: 0))
+        // Top right curve
+        path.addQuadCurve(
+            to: CGPoint(x: w, y: h * 0.15),
+            control: CGPoint(x: w, y: 0)
+        )
+        // Right side
+        path.addLine(to: CGPoint(x: w, y: h * 0.45))
+        // Bottom right curve to point
+        path.addQuadCurve(
+            to: CGPoint(x: cx, y: h),
+            control: CGPoint(x: w, y: h * 0.78)
+        )
+        // Bottom left curve
+        path.addQuadCurve(
+            to: CGPoint(x: 0, y: h * 0.45),
+            control: CGPoint(x: 0, y: h * 0.78)
+        )
+        // Left side
+        path.addLine(to: CGPoint(x: 0, y: h * 0.15))
+        // Top left curve
+        path.addQuadCurve(
+            to: CGPoint(x: cx, y: 0),
+            control: CGPoint(x: 0, y: 0)
+        )
+        path.closeSubpath()
+        return path
+    }
+}
+
+// MARK: - Screen 1
 
 struct OnboardingWelcomeView: View {
 
@@ -21,44 +89,13 @@ struct OnboardingWelcomeView: View {
         VStack(spacing: 0) {
             Spacer()
 
-            // ── Card illustration ────────────────────────────────────────
-            ZStack(alignment: .topLeading) {
-                // Card body
-                RoundedRectangle(cornerRadius: 18)
-                    .fill(Color.sgBgRaised)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18)
-                            .stroke(Color.sgBorderHover, lineWidth: 1)
-                    )
-                    .frame(width: 228, height: 144)
-
-                // EMV chip — gold-toned rectangle in upper-left
-                RoundedRectangle(cornerRadius: 5)
-                    .fill(Color(hex: "#7a6840"))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 5)
-                            .stroke(Color(hex: "#9a8855"), lineWidth: 0.5)
-                    )
-                    .frame(width: 38, height: 30)
-                    .padding(.top, 30)
-                    .padding(.leading, 26)
-
-                // Chip contact lines (horizontal stripes for realism)
-                VStack(spacing: 5) {
-                    ForEach(0..<3) { _ in
-                        Rectangle()
-                            .fill(Color(hex: "#9a8855").opacity(0.4))
-                            .frame(width: 38, height: 1)
-                    }
-                }
-                .padding(.top, 39)
-                .padding(.leading, 26)
-            }
+            // ── Illustration ────────────────────────────────────────
+            ShieldIllustration()
 
             Spacer().frame(height: 44)
 
-            // ── Heading ──────────────────────────────────────────────────
-            Text("Your secrets. On a chip.")
+            // ── Heading ─────────────────────────────────────────────
+            Text("Your Nostr identity. Secured.")
                 .font(.outfit(.light, size: 20))
                 .tracking(0.3)
                 .foregroundColor(.sgTextBright)
@@ -67,8 +104,8 @@ struct OnboardingWelcomeView: View {
 
             Spacer().frame(height: 16)
 
-            // ── Body ─────────────────────────────────────────────────────
-            Text("Store seed phrases, passwords, and sensitive data on a PIN-protected NFC smart card.")
+            // ── Body ────────────────────────────────────────────────
+            Text("Signstr keeps your private key locked in the Secure Enclave. It never leaves your device.")
                 .font(.outfit(.light, size: 13))
                 .foregroundColor(.sgTextMuted)
                 .multilineTextAlignment(.center)

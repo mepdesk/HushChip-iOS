@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Gridmark Technologies Ltd (Signstr)
-// https://github.com/hushchip/Signstr-iOS
+// https://github.com/signstr/Signstr-iOS
 //
 // Based on Seedkeeper-iOS by Toporin / Satochip S.R.L.
 // https://github.com/Toporin/Seedkeeper-iOS
@@ -10,59 +10,112 @@
 // (at your option) any later version.
 //
 //  OnboardingNFCView.swift
-//  Signstr — Onboarding Screen 3: "Your PIN is everything."
+//  Signstr — Onboarding Screen 3: "Face ID protects every signature."
 
 import Foundation
 import SwiftUI
 
-// MARK: - Lock illustration
+// MARK: - Face ID illustration
 
-/// Padlock built from SwiftUI primitives:
-///   • shackle: trimmed circle (top semicircle) + two vertical legs
-///   • body: rounded rectangle
-///   • keyhole: small filled circle
-private struct LockIllustration: View {
+/// Face ID icon built from SwiftUI primitives.
+private struct FaceIDIllustration: View {
 
     var body: some View {
         ZStack {
-            // ── Shackle — top arc ────────────────────────────────────────
-            // trim(0.5 → 1.0) on a Circle starting at 3-o'clock going clockwise:
-            //   0.5 = 9-o'clock, 1.0 = 3-o'clock → traces the top half (∩ arc)
-            Circle()
-                .trim(from: 0.5, to: 1.0)
-                .stroke(Color.sgBorderHover, style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                .frame(width: 44, height: 44)
-                .offset(y: -25)
+            // Rounded frame corners (Face ID bracket style)
+            FaceIDBrackets()
+                .stroke(Color.sgBorderHover, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                .frame(width: 88, height: 88)
 
-            // ── Shackle — left leg ───────────────────────────────────────
-            Rectangle()
-                .fill(Color.sgBorderHover)
-                .frame(width: 5, height: 18)
-                .offset(x: -22, y: -8)
+            // Face features
+            VStack(spacing: 10) {
+                // Eyes
+                HStack(spacing: 22) {
+                    // Left eye
+                    VStack(spacing: 0) {
+                        Circle()
+                            .fill(Color.sgBorderHover)
+                            .frame(width: 6, height: 6)
+                    }
+                    // Right eye
+                    VStack(spacing: 0) {
+                        Circle()
+                            .fill(Color.sgBorderHover)
+                            .frame(width: 6, height: 6)
+                    }
+                }
 
-            // ── Shackle — right leg ──────────────────────────────────────
-            Rectangle()
-                .fill(Color.sgBorderHover)
-                .frame(width: 5, height: 18)
-                .offset(x: 22, y: -8)
+                // Nose line
+                NosePath()
+                    .stroke(Color.sgBorderHover, style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                    .frame(width: 6, height: 10)
 
-            // ── Lock body ────────────────────────────────────────────────
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.sgBgRaised)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.sgBorderHover, lineWidth: 1.5)
-                )
-                .frame(width: 72, height: 56)
-                .offset(y: 22)
-
-            // ── Keyhole ──────────────────────────────────────────────────
-            Circle()
-                .fill(Color.sgBgSurface)
-                .frame(width: 14, height: 14)
-                .offset(y: 20)
+                // Mouth arc
+                MouthArc()
+                    .stroke(Color.sgBorderHover, style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                    .frame(width: 20, height: 6)
+            }
         }
-        .frame(width: 110, height: 110)
+        .frame(width: 120, height: 120)
+    }
+}
+
+/// Corner brackets (Face ID scan frame).
+private struct FaceIDBrackets: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let corner: CGFloat = 16
+        let len: CGFloat = 20
+
+        // Top-left
+        path.move(to: CGPoint(x: 0, y: len))
+        path.addLine(to: CGPoint(x: 0, y: corner))
+        path.addQuadCurve(to: CGPoint(x: corner, y: 0), control: .zero)
+        path.addLine(to: CGPoint(x: len, y: 0))
+
+        // Top-right
+        path.move(to: CGPoint(x: rect.maxX - len, y: 0))
+        path.addLine(to: CGPoint(x: rect.maxX - corner, y: 0))
+        path.addQuadCurve(to: CGPoint(x: rect.maxX, y: corner), control: CGPoint(x: rect.maxX, y: 0))
+        path.addLine(to: CGPoint(x: rect.maxX, y: len))
+
+        // Bottom-right
+        path.move(to: CGPoint(x: rect.maxX, y: rect.maxY - len))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - corner))
+        path.addQuadCurve(to: CGPoint(x: rect.maxX - corner, y: rect.maxY), control: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.maxX - len, y: rect.maxY))
+
+        // Bottom-left
+        path.move(to: CGPoint(x: len, y: rect.maxY))
+        path.addLine(to: CGPoint(x: corner, y: rect.maxY))
+        path.addQuadCurve(to: CGPoint(x: 0, y: rect.maxY - corner), control: CGPoint(x: 0, y: rect.maxY))
+        path.addLine(to: CGPoint(x: 0, y: rect.maxY - len))
+
+        return path
+    }
+}
+
+/// A small vertical L-shaped nose line.
+private struct NosePath: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.midX, y: 0))
+        path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        return path
+    }
+}
+
+/// A small upward-curving mouth arc.
+private struct MouthArc: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: 0, y: 0))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.maxX, y: 0),
+            control: CGPoint(x: rect.midX, y: rect.maxY)
+        )
+        return path
     }
 }
 
@@ -74,13 +127,13 @@ struct OnboardingNFCView: View {
         VStack(spacing: 0) {
             Spacer()
 
-            // ── Illustration ─────────────────────────────────────────────
-            LockIllustration()
+            // ── Illustration ────────────────────────────────────────
+            FaceIDIllustration()
 
             Spacer().frame(height: 44)
 
-            // ── Heading ──────────────────────────────────────────────────
-            Text("Your PIN is everything.")
+            // ── Heading ─────────────────────────────────────────────
+            Text("Face ID protects every signature.")
                 .font(.outfit(.light, size: 20))
                 .tracking(0.3)
                 .foregroundColor(.sgTextBright)
@@ -89,19 +142,19 @@ struct OnboardingNFCView: View {
 
             Spacer().frame(height: 24)
 
-            // ── Red warning box ──────────────────────────────────────────
-            Text("If you forget your PIN, the card locks permanently. There is no recovery. Choose a PIN you will remember.")
+            // ── Info box ────────────────────────────────────────────
+            Text("Every time you sign an event, Face ID confirms it's really you. Your key is never exposed.")
                 .font(.outfit(.light, size: 12))
-                .foregroundColor(.sgDanger)
+                .foregroundColor(.sgTextMuted)
                 .multilineTextAlignment(.center)
                 .lineSpacing(5)
                 .padding(16)
                 .frame(maxWidth: .infinity)
-                .background(Color.sgDangerBg)
+                .background(Color.sgBgRaised)
                 .cornerRadius(8)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.sgDangerBorder, lineWidth: 1)
+                        .stroke(Color.sgBorder, lineWidth: 1)
                 )
                 .padding(.horizontal, 32)
 

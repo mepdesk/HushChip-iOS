@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Gridmark Technologies Ltd (Signstr)
-// https://github.com/hushchip/Signstr-iOS
+// https://github.com/signstr/Signstr-iOS
 //
 // Based on Seedkeeper-iOS by Toporin / Satochip S.R.L.
 // https://github.com/Toporin/Seedkeeper-iOS
@@ -10,93 +10,80 @@
 // (at your option) any later version.
 //
 //  OnboardingInfoView.swift
-//  Signstr — Onboarding Screen 2: "Tap. Store. Done."
+//  Signstr — Onboarding Screen 2: "Sign events. Never paste your nsec again."
 
 import Foundation
 import SwiftUI
 
-// MARK: - NFC ripple arc shape
+// MARK: - Signing illustration
 
-/// A single right-opening arc, representing an NFC radio wave.
-private struct RippleArc: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let cx = rect.minX       // anchor on the left edge
-        let cy = rect.midY
-        let r  = rect.width      // radius = full width of the frame
-        path.addArc(
-            center: CGPoint(x: cx, y: cy),
-            radius: r,
-            startAngle: .degrees(-50),
-            endAngle:   .degrees(50),
-            clockwise: false
-        )
-        return path
+/// A pen signing a document, representing event signing.
+private struct SigningIllustration: View {
+    var body: some View {
+        ZStack {
+            // Document
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.sgBgRaised)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.sgBorderHover, lineWidth: 1)
+                )
+                .frame(width: 80, height: 100)
+
+            // Text lines on document
+            VStack(alignment: .leading, spacing: 6) {
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(Color.sgBorder)
+                    .frame(width: 48, height: 3)
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(Color.sgBorder)
+                    .frame(width: 40, height: 3)
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(Color.sgBorder)
+                    .frame(width: 52, height: 3)
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(Color.sgBorder)
+                    .frame(width: 32, height: 3)
+            }
+            .offset(y: -8)
+
+            // Checkmark at bottom of document
+            Image(systemName: "checkmark")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.sgBorderHover)
+                .offset(y: 30)
+
+            // Pen (angled, overlapping document)
+            PenShape()
+                .fill(Color.sgBorderHover)
+                .frame(width: 8, height: 60)
+                .rotationEffect(.degrees(35))
+                .offset(x: 52, y: 24)
+        }
+        .frame(width: 180, height: 140)
     }
 }
 
-// MARK: - NFC illustration
+/// A simple pen nib shape.
+private struct PenShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let w = rect.width
+        let h = rect.height
 
-private struct NfcIllustration: View {
-    var body: some View {
-        ZStack {
-            // ── Card (left, angled toward phone) ────────────────────────
-            ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.sgBgRaised)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.sgBorderHover, lineWidth: 1)
-                    )
-                    .frame(width: 90, height: 58)
+        // Pen body (rectangle)
+        path.addRoundedRect(
+            in: CGRect(x: 0, y: 0, width: w, height: h * 0.8),
+            cornerSize: CGSize(width: 2, height: 2)
+        )
 
-                // Mini chip on card
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color(hex: "#7a6840"))
-                    .frame(width: 20, height: 16)
-                    .padding(.top, 14)
-                    .padding(.leading, 12)
-            }
-            .rotationEffect(.degrees(-20))
-            .offset(x: -62, y: 12)
+        // Pen tip (triangle)
+        path.move(to: CGPoint(x: 0, y: h * 0.8))
+        path.addLine(to: CGPoint(x: w, y: h * 0.8))
+        path.addLine(to: CGPoint(x: w / 2, y: h))
+        path.closeSubpath()
 
-            // ── NFC ripple arcs (3, increasing size, fading outward) ─────
-            ForEach(0..<3) { i in
-                let size = CGFloat(30 + i * 22)
-                RippleArc()
-                    .stroke(
-                        Color.sgBorderHover.opacity(1.0 - Double(i) * 0.28),
-                        style: StrokeStyle(lineWidth: 1.5, lineCap: .round)
-                    )
-                    .frame(width: size, height: size)
-                    .offset(x: -10, y: 0)
-            }
-
-            // ── Phone (right, upright) ───────────────────────────────────
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.sgBgRaised)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.sgBorderHover, lineWidth: 1)
-                    )
-                    .frame(width: 52, height: 88)
-
-                // Camera pill
-                Capsule()
-                    .fill(Color.sgBgSurface)
-                    .frame(width: 16, height: 5)
-                    .offset(y: -36)
-
-                // Home indicator bar
-                Capsule()
-                    .fill(Color.sgBorder)
-                    .frame(width: 22, height: 4)
-                    .offset(y: 36)
-            }
-            .offset(x: 56, y: -10)
-        }
-        .frame(width: 220, height: 140)
+        return path
     }
 }
 
@@ -108,13 +95,13 @@ struct OnboardingInfoView: View {
         VStack(spacing: 0) {
             Spacer()
 
-            // ── Illustration ─────────────────────────────────────────────
-            NfcIllustration()
+            // ── Illustration ────────────────────────────────────────
+            SigningIllustration()
 
             Spacer().frame(height: 44)
 
-            // ── Heading ──────────────────────────────────────────────────
-            Text("Tap. Store. Done.")
+            // ── Heading ─────────────────────────────────────────────
+            Text("Sign events. Never paste your nsec again.")
                 .font(.outfit(.light, size: 20))
                 .tracking(0.3)
                 .foregroundColor(.sgTextBright)
@@ -123,8 +110,8 @@ struct OnboardingInfoView: View {
 
             Spacer().frame(height: 16)
 
-            // ── Body ─────────────────────────────────────────────────────
-            Text("Hold your card to your phone. Enter your PIN. Your secrets are safe.")
+            // ── Body ────────────────────────────────────────────────
+            Text("Approve Nostr events from any client. Your key signs locally — nothing is shared.")
                 .font(.outfit(.light, size: 13))
                 .foregroundColor(.sgTextMuted)
                 .multilineTextAlignment(.center)

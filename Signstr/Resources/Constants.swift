@@ -19,5 +19,7 @@ struct Constants {
         // True once the user has tapped "I understand" on the last onboarding screen.
         // On a fresh install this key is absent, so bool(forKey:) returns false → show onboarding.
         static let onboardingComplete = "onboardingComplete"
+        // True once the user has created or imported a key.
+        static let keySetupComplete = "keySetupComplete"
     }
 }

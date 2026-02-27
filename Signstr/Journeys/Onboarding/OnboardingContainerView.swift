@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Gridmark Technologies Ltd (Signstr)
-// https://github.com/hushchip/Signstr-iOS
+// https://github.com/signstr/Signstr-iOS
 //
 // Based on Seedkeeper-iOS by Toporin / Satochip S.R.L.
 // https://github.com/Toporin/Seedkeeper-iOS
@@ -22,10 +22,11 @@ struct OnboardingContainerView: View {
 
     private let pageCount = 3
 
-    // Called when the user taps "I understand" on the last page.
+    // Called when the user taps "GET STARTED" on the last page.
     func completeOnboarding() {
         UserDefaults.standard.set(true, forKey: Constants.Keys.onboardingComplete)
-        cardState.homeNavigationPath = .init()
+        // Navigate to key setup
+        cardState.homeNavigationPath.append(NavigationRoutes.keySetup)
     }
 
     // MARK: - Body
@@ -84,7 +85,7 @@ struct OnboardingContainerView: View {
                     Button(action: {
                         completeOnboarding()
                     }) {
-                        Text("I UNDERSTAND")
+                        Text("GET STARTED")
                             .font(.outfit(.regular, size: 11))
                             .tracking(4)
                             .foregroundColor(.sgTextBright)

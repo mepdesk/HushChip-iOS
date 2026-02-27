@@ -198,11 +198,13 @@ final class NIP46Service: ObservableObject {
         // REQ: subscribe to kind 24133 events tagged to our pubkey
         print("[NIP46]   Subscribing with signer pubkey: \(signerPubkey)")
         let subId = "signstr-\(signerPubkey.prefix(8))"
+        let sinceTimestamp = Int(Date().timeIntervalSince1970) - 10
         let filter: [String: Any] = [
             "kinds": [24133],
             "#p": [signerPubkey],
-            "limit": 0 // Only new events, not historical
+            "since": sinceTimestamp
         ]
+        print("[NIP46]   Filter since: \(sinceTimestamp) (now - 10s)")
 
         guard let filterData = try? JSONSerialization.data(withJSONObject: filter),
               let filterString = String(data: filterData, encoding: .utf8) else {
@@ -403,8 +405,7 @@ final class NIP46Service: ObservableObject {
                 print("[NIP46]   ⚠ No signer private key available for ECDH!")
             }
 
-            let request: NIP46Request
-            let detectedEncryption: NIP46Encryption
+            let decryptResult: (NIP46Request, NIP46Encryption)
 
             // Heuristic: NIP-04 payloads contain "?iv=" with base64;
             // NIP-44 payloads are pure base64 with a version byte prefix.
@@ -423,44 +424,29 @@ final class NIP46Service: ObservableObject {
                         privateKey: privKey,
                         publicKey: clientPubkeyData
                     )
-                    request = try NIP46MessageHandler.parseRequest(json)
-                    detectedEncryption = .nip04
+                    let req = try NIP46MessageHandler.parseRequest(json)
                     print("[NIP46]   Decrypted with NIP-04")
+                    decryptResult = (req, .nip04)
                 } catch {
                     print("[NIP46]   NIP-04 failed (\(error)), trying NIP-44...")
-                    request = try NIP46MessageHandler.decryptRequest(
+                    let req = try NIP46MessageHandler.decryptRequest(
                         payload: encryptedContent,
                         conversationKey: session.conversationKey
                     )
-                    detectedEncryption = .nip44
                     print("[NIP46]   Decrypted with NIP-44 (fallback)")
+                    decryptResult = (req, .nip44)
                 }
             } else {
-                // Try NIP-44 first, fall back to NIP-04
+                // Try NIP-44 (HKDF conv key) → NIP-44 (raw ECDH) → NIP-04
                 print("[NIP46]   No '?iv=' marker — trying NIP-44 first...")
-                do {
-                    request = try NIP46MessageHandler.decryptRequest(
-                        payload: encryptedContent,
-                        conversationKey: session.conversationKey
-                    )
-                    detectedEncryption = .nip44
-                    print("[NIP46]   Decrypted with NIP-44")
-                } catch {
-                    print("[NIP46]   NIP-44 failed (\(error)), trying NIP-04...")
-                    guard let privKey = signerPrivateKey else {
-                        throw error
-                    }
-                    let clientPubkeyData = try NostrKeyUtils.hexDecode(session.clientPubkey)
-                    let json = try NIP04.decrypt(
-                        payload: encryptedContent,
-                        privateKey: privKey,
-                        publicKey: clientPubkeyData
-                    )
-                    request = try NIP46MessageHandler.parseRequest(json)
-                    detectedEncryption = .nip04
-                    print("[NIP46]   Decrypted with NIP-04 (fallback)")
-                }
+                decryptResult = try decryptNIP44WithFallbacks(
+                    encryptedContent: encryptedContent,
+                    session: session
+                )
             }
+
+            let request = decryptResult.0
+            let detectedEncryption = decryptResult.1
 
             // Update session encryption preference to match what the client sent
             if session.encryptionPreference != detectedEncryption {
@@ -550,6 +536,73 @@ final class NIP46Service: ObservableObject {
             print("[NIP46] ✓ Response sent for \(request.method) (id: \(request.id))")
         } catch {
             print("[NIP46] ✗ Error processing request: \(error)")
+        }
+    }
+
+    // MARK: - Decryption helpers
+
+    /// Attempts NIP-44 decryption with multiple key derivation strategies, then NIP-04 as final fallback.
+    /// 1. NIP-44 with HKDF conversation key (standard)
+    /// 2. NIP-44 with raw ECDH shared secret (non-standard, no HKDF)
+    /// 3. NIP-04 (legacy)
+    private func decryptNIP44WithFallbacks(
+        encryptedContent: String,
+        session: NIP46Session
+    ) throws -> (NIP46Request, NIP46Encryption) {
+        // Attempt 1: Standard NIP-44 with HKDF conversation key
+        let ck4 = session.conversationKey.withUnsafeBytes { Data($0).prefix(4).map { String(format: "%02x", $0) }.joined() }
+        print("[NIP46]   Attempt 1: NIP-44 with HKDF conversation key (first 4 bytes): \(ck4)")
+
+        do {
+            let req = try NIP46MessageHandler.decryptRequest(
+                payload: encryptedContent,
+                conversationKey: session.conversationKey
+            )
+            print("[NIP46]   Decrypted with NIP-44 (HKDF conversation key)")
+            return (req, .nip44)
+        } catch let nip44Error {
+            print("[NIP46]   NIP-44 (HKDF) failed: \(nip44Error)")
+
+            // Attempt 2: NIP-44 with raw ECDH shared secret (no HKDF)
+            if let privKey = signerPrivateKey {
+                do {
+                    let clientPubkeyData = try NostrKeyUtils.hexDecode(session.clientPubkey)
+                    let rawECDH = try NIP44.ecdhSharedSecret(privateKey: privKey, publicKey: clientPubkeyData)
+                    let rawKey = SymmetricKey(data: rawECDH)
+                    let rk4 = rawECDH.prefix(4).map { String(format: "%02x", $0) }.joined()
+                    print("[NIP46]   Attempt 2: NIP-44 with raw ECDH key (first 4 bytes): \(rk4)")
+
+                    let req = try NIP46MessageHandler.decryptRequest(
+                        payload: encryptedContent,
+                        conversationKey: rawKey
+                    )
+                    print("[NIP46]   Decrypted with NIP-44 (raw ECDH, no HKDF)")
+                    return (req, .nip44)
+                } catch {
+                    print("[NIP46]   NIP-44 (raw ECDH) failed: \(error)")
+                }
+            }
+
+            // Attempt 3: NIP-04 final fallback
+            print("[NIP46]   Attempt 3: NIP-04 fallback...")
+            guard let privKey = signerPrivateKey else {
+                throw nip44Error
+            }
+            do {
+                let clientPubkeyData = try NostrKeyUtils.hexDecode(session.clientPubkey)
+                let json = try NIP04.decrypt(
+                    payload: encryptedContent,
+                    privateKey: privKey,
+                    publicKey: clientPubkeyData
+                )
+                let req = try NIP46MessageHandler.parseRequest(json)
+                print("[NIP46]   Decrypted with NIP-04 (final fallback)")
+                return (req, .nip04)
+            } catch {
+                print("[NIP46]   NIP-04 also failed: \(error)")
+                // Throw the original NIP-44 error since the content looked like NIP-44
+                throw nip44Error
+            }
         }
     }
 

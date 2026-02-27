@@ -95,19 +95,18 @@ final class NIP46Service: ObservableObject {
 
         // For client-initiated flow (nostrconnect://), send connect response
         // immediately so the client knows the signer is ready.
-        // Sends TWICE — once NIP-04 and once NIP-44 — so both legacy and modern
-        // clients can decrypt the response. Each is a separate kind 24133 event.
+        // Uses NIP-04 only — dual NIP-04+NIP-44 sends confused clients (the
+        // undecryptable NIP-44 event caused them to abort the connection).
         if connectionInfo.flow == .clientInitiated {
             let secret = connectionInfo.secret ?? ""
             let clientPubkey = session.clientPubkey
             let relays = session.relays
-            let convKey = session.conversationKey
             guard let privKey = self.signerPrivateKey else {
-                print("[NIP46] ⚠ Cannot send NIP-04 connect response — no private key")
+                print("[NIP46] ⚠ Cannot send connect response — no private key")
                 return session
             }
 
-            print("[NIP46] Client-initiated flow — sending dual connect responses (NIP-04 + NIP-44)")
+            print("[NIP46] Client-initiated flow — sending connect response (NIP-04)")
             print("[NIP46]   Secret: \(secret.isEmpty ? "empty" : String(secret.prefix(8)) + "...")")
 
             Task {
@@ -120,78 +119,40 @@ final class NIP46Service: ObservableObject {
                     self.subscribeToRelay(fallbackRelay)
                 }
 
-                // ── NIP-04 connect response ──
                 do {
-                    let response04 = NIP46Response.success(
+                    let response = NIP46Response.success(
                         id: UUID().uuidString,
                         result: secret
                     )
                     let encoder = JSONEncoder()
                     encoder.outputFormatting = .sortedKeys
-                    let jsonData = try encoder.encode(response04)
+                    let jsonData = try encoder.encode(response)
                     guard let jsonString = String(data: jsonData, encoding: .utf8) else {
-                        print("[NIP46] ✗ Failed to encode NIP-04 connect response JSON")
+                        print("[NIP46] ✗ Failed to encode connect response JSON")
                         return
                     }
-                    print("[NIP46]   NIP-04 connect response JSON: \(jsonString)")
+                    print("[NIP46]   Connect response JSON: \(jsonString)")
 
                     let clientPubkeyData = try NostrKeyUtils.hexDecode(clientPubkey)
-                    let encrypted04 = try NIP04.encrypt(
+                    let encrypted = try NIP04.encrypt(
                         plaintext: jsonString,
                         privateKey: privKey,
                         publicKey: clientPubkeyData
                     )
-                    print("[NIP46]   Encrypted with NIP-04: \(encrypted04.prefix(60))...")
+                    print("[NIP46]   Encrypted with NIP-04: \(encrypted.prefix(60))...")
 
                     for relayURL in sendRelays {
                         let isFallback = !relays.contains(relayURL)
-                        let tag = "NIP-04\(isFallback ? ", fallback" : "")"
-                        print("[NIP46] → Connect response (\(tag)) to \(relayURL)...")
+                        print("[NIP46] → Connect response (NIP-04) to \(relayURL)\(isFallback ? " (fallback)" : "")...")
                         try await sendResponse(
-                            encryptedContent: encrypted04,
+                            encryptedContent: encrypted,
                             toClientPubkey: clientPubkey,
                             relayURL: relayURL
                         )
-                        print("[NIP46] ✓ Connect response (\(tag)) sent to \(relayURL)")
+                        print("[NIP46] ✓ Connect response sent to \(relayURL)\(isFallback ? " (fallback)" : "")")
                     }
                 } catch {
-                    print("[NIP46] ✗ Failed to send NIP-04 connect response: \(error)")
-                }
-
-                // ── NIP-44 connect response ──
-                do {
-                    let response44 = NIP46Response.success(
-                        id: UUID().uuidString,
-                        result: secret
-                    )
-                    let encoder = JSONEncoder()
-                    encoder.outputFormatting = .sortedKeys
-                    let jsonData = try encoder.encode(response44)
-                    guard let jsonString = String(data: jsonData, encoding: .utf8) else {
-                        print("[NIP46] ✗ Failed to encode NIP-44 connect response JSON")
-                        return
-                    }
-                    print("[NIP46]   NIP-44 connect response JSON: \(jsonString)")
-
-                    let encrypted44 = try NIP44.encrypt(
-                        plaintext: jsonString,
-                        conversationKey: convKey
-                    )
-                    print("[NIP46]   Encrypted with NIP-44: \(encrypted44.prefix(60))...")
-
-                    for relayURL in sendRelays {
-                        let isFallback = !relays.contains(relayURL)
-                        let tag = "NIP-44\(isFallback ? ", fallback" : "")"
-                        print("[NIP46] → Connect response (\(tag)) to \(relayURL)...")
-                        try await sendResponse(
-                            encryptedContent: encrypted44,
-                            toClientPubkey: clientPubkey,
-                            relayURL: relayURL
-                        )
-                        print("[NIP46] ✓ Connect response (\(tag)) sent to \(relayURL)")
-                    }
-                } catch {
-                    print("[NIP46] ✗ Failed to send NIP-44 connect response: \(error)")
+                    print("[NIP46] ✗ Failed to send connect response: \(error)")
                 }
             }
         }
@@ -252,13 +213,13 @@ final class NIP46Service: ObservableObject {
         // REQ: subscribe to kind 24133 events tagged to our pubkey
         print("[NIP46]   Subscribing with signer pubkey: \(signerPubkey)")
         let subId = "signstr-\(signerPubkey.prefix(8))"
-        let sinceTimestamp = Int(Date().timeIntervalSince1970) - 10
+        let sinceTimestamp = Int(Date().timeIntervalSince1970) - 60
         let filter: [String: Any] = [
             "kinds": [24133],
             "#p": [signerPubkey],
             "since": sinceTimestamp
         ]
-        print("[NIP46]   Filter since: \(sinceTimestamp) (now - 10s)")
+        print("[NIP46]   Filter since: \(sinceTimestamp) (now - 60s)")
 
         guard let filterData = try? JSONSerialization.data(withJSONObject: filter),
               let filterString = String(data: filterData, encoding: .utf8) else {

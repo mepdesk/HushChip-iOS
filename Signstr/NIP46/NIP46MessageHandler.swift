@@ -136,10 +136,12 @@ enum NIP46MessageHandler {
 
     /// Handles `sign_event` — signs the event and returns the full signed event JSON.
     ///
-    /// params[0] is the unsigned event JSON string. We:
-    /// 1. Decode the unsigned event
-    /// 2. Fill in the pubkey if missing
-    /// 3. Compute the event ID (NIP-01 SHA-256)
+    /// params[0] is the unsigned event JSON string. Clients send events WITHOUT id/sig
+    /// fields, so we parse with JSONSerialization (not Codable) to handle missing fields.
+    /// We:
+    /// 1. Parse the unsigned event dict
+    /// 2. Fill in the pubkey from the signer
+    /// 3. Compute the event ID (NIP-01 SHA-256 of [0, pubkey, created_at, kind, tags, content])
     /// 4. Sign the hash via the signer
     /// 5. Return the fully signed event as JSON
     private static func handleSignEvent(
@@ -150,29 +152,35 @@ enum NIP46MessageHandler {
             return .error(id: request.id, message: "sign_event requires an event JSON parameter")
         }
 
-        guard let eventData = eventJSON.data(using: .utf8) else {
-            return .error(id: request.id, message: "Invalid event JSON encoding")
+        guard let eventData = eventJSON.data(using: .utf8),
+              let dict = try? JSONSerialization.jsonObject(with: eventData) as? [String: Any] else {
+            return .error(id: request.id, message: "Invalid event JSON")
         }
 
         do {
-            // Decode the unsigned event
-            let unsigned = try JSONDecoder().decode(NostrEvent.self, from: eventData)
+            // Extract fields — id and sig are optional (clients send unsigned events)
+            guard let kind = dict["kind"] as? Int else {
+                return .error(id: request.id, message: "sign_event: missing 'kind'")
+            }
+            let content = dict["content"] as? String ?? ""
+            let tags = dict["tags"] as? [[String]] ?? (dict["tags"] as? [[Any]])?.map { $0.map { "\($0)" } } ?? []
+            let createdAt = dict["created_at"] as? Int ?? Int(Date().timeIntervalSince1970)
 
             // Get public key from signer
             let pubkeyData = try await signer.getPublicKey()
             let pubkeyHex = NostrKeyUtils.hexEncode(pubkeyData)
 
-            // Rebuild with correct pubkey
-            let withPubkey = NostrEvent.unsigned(
+            // Build the unsigned event with correct pubkey
+            let unsigned = NostrEvent.unsigned(
                 pubkey: pubkeyHex,
-                kind: unsigned.kind,
-                tags: unsigned.tags,
-                content: unsigned.content,
-                createdAt: unsigned.createdAt
+                kind: kind,
+                tags: tags,
+                content: content,
+                createdAt: createdAt
             )
 
-            // Compute event ID
-            let eventIdData = NostrEventSerializer.computeEventId(for: withPubkey)
+            // Compute event ID (NIP-01: SHA-256 of serialized [0, pubkey, created_at, kind, tags, content])
+            let eventIdData = NostrEventSerializer.computeEventId(for: unsigned)
             let eventIdHex = NostrKeyUtils.hexEncode(eventIdData)
 
             // Sign
@@ -180,7 +188,7 @@ enum NIP46MessageHandler {
             let sigHex = NostrKeyUtils.hexEncode(sigData)
 
             // Assemble signed event
-            let signed = withPubkey.signed(id: eventIdHex, sig: sigHex)
+            let signed = unsigned.signed(id: eventIdHex, sig: sigHex)
 
             // Encode to JSON
             let encoder = JSONEncoder()

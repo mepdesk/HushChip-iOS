@@ -39,6 +39,13 @@ final class NIP46Service: ObservableObject {
     /// Value is (relayURL, sentTime). Entries are cleared on OK receipt or after timeout.
     private var pendingOKs: [String: (relayURL: String, sentAt: Date)] = [:]
 
+    /// Queued requests awaiting sequential processing (prevents concurrent approval sheets
+    /// which cause Swift Task continuation misuse).
+    private var requestQueue: [(encryptedContent: String, session: NIP46Session, relayURL: String)] = []
+
+    /// Whether a request is currently being processed (waiting for user approval).
+    private var isProcessingRequest = false
+
     /// The signer's hex-encoded public key (for filtering incoming events).
     private var signerPubkeyHex: String?
 
@@ -353,13 +360,34 @@ final class NIP46Service: ObservableObject {
 
         print("[NIP46]   Matched session: \(session.displayName)")
 
-        // Process the request asynchronously
+        // Enqueue and process sequentially to avoid concurrent approval sheets
+        enqueueRequest(encryptedContent: encryptedContent, session: session, relayURL: relayURL)
+    }
+
+    // MARK: - Request queue
+
+    /// Adds a request to the sequential processing queue.
+    private func enqueueRequest(encryptedContent: String, session: NIP46Session, relayURL: String) {
+        requestQueue.append((encryptedContent, session, relayURL))
+        print("[NIP46] Queued request (queue depth: \(requestQueue.count), processing: \(isProcessingRequest))")
+        processNextInQueue()
+    }
+
+    /// Processes the next queued request if nothing is currently being processed.
+    private func processNextInQueue() {
+        guard !isProcessingRequest, !requestQueue.isEmpty else { return }
+        isProcessingRequest = true
+        let next = requestQueue.removeFirst()
+        print("[NIP46] Processing next request from queue (remaining: \(requestQueue.count))")
+
         Task {
             await processRequest(
-                encryptedContent: encryptedContent,
-                session: session,
-                relayURL: relayURL
+                encryptedContent: next.encryptedContent,
+                session: next.session,
+                relayURL: next.relayURL
             )
+            isProcessingRequest = false
+            processNextInQueue()
         }
     }
 
@@ -533,13 +561,21 @@ final class NIP46Service: ObservableObject {
                 }
             }
 
-            // 3. Dispatch to handler (signer will trigger Face ID for sign_event)
-            print("[NIP46] Dispatching \(request.method) to handler...")
-            let response = await NIP46MessageHandler.handleRequest(
-                request,
-                signer: signer,
-                session: session
-            )
+            // 3. Dispatch to handler
+            let response: NIP46Response
+
+            if request.method == "get_public_key", let pubkey = signerPubkeyHex {
+                // Return pubkey directly — no biometric auth needed for public data
+                print("[NIP46] Handling get_public_key directly (no biometrics)")
+                response = .success(id: request.id, result: pubkey)
+            } else {
+                print("[NIP46] Dispatching \(request.method) to handler...")
+                response = await NIP46MessageHandler.handleRequest(
+                    request,
+                    signer: signer,
+                    session: session
+                )
+            }
             print("[NIP46]   Response: result=\(response.result?.prefix(80) ?? "nil") error=\(response.error ?? "nil")")
 
             // 4. Encrypt response using the session's detected encryption preference

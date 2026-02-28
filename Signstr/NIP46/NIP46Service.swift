@@ -39,6 +39,14 @@ final class NIP46Service: ObservableObject {
     /// Value is (relayURL, sentTime). Entries are cleared on OK receipt or after timeout.
     private var pendingOKs: [String: (relayURL: String, sentAt: Date)] = [:]
 
+    /// Tracks reconnection attempts per relay URL for exponential backoff.
+    /// Value is the number of consecutive failed attempts.
+    private var relayReconnectAttempts: [String: Int] = [:]
+
+    /// Active reconnection timers per relay URL, so we can cancel if the relay is
+    /// manually disconnected or reconnects successfully.
+    private var relayReconnectTasks: [String: Task<Void, Never>] = [:]
+
     /// Queued requests awaiting sequential processing (prevents concurrent approval sheets
     /// which cause Swift Task continuation misuse).
     private var requestQueue: [(encryptedContent: String, session: NIP46Session, relayURL: String, queuedAt: CFAbsoluteTime)] = []
@@ -113,6 +121,17 @@ final class NIP46Service: ObservableObject {
         print("[NIP46]   Conversation key (first 8 bytes): \(convKeyHex)")
         print("[NIP46]   ECDH inputs: privkey=\(NostrKeyUtils.hexEncode(signerPrivateKey).prefix(8))... pubkey=\(session.clientPubkey.prefix(16))...")
 
+        // If a session already exists for this client, clean up its unique relay connections
+        if let existing = sessions[session.clientPubkey] {
+            print("[NIP46]   Replacing existing session for \(existing.displayName)")
+            let otherSessionRelays = Set(sessions.values
+                .filter { $0.clientPubkey != session.clientPubkey }
+                .flatMap { $0.relays })
+            for oldRelay in existing.relays where !otherSessionRelays.contains(oldRelay) && !session.relays.contains(oldRelay) {
+                disconnectRelay(oldRelay)
+                print("[NIP46]   Disconnected stale relay from old session: \(oldRelay)")
+            }
+        }
         sessions[session.clientPubkey] = session
 
         // Persist connection for restore on next launch
@@ -293,6 +312,10 @@ final class NIP46Service: ObservableObject {
             return
         }
 
+        // Cancel any pending reconnection timer for this relay
+        relayReconnectTasks[relayURLString]?.cancel()
+        relayReconnectTasks.removeValue(forKey: relayURLString)
+
         print("[NIP46] Opening WebSocket to \(relayURLString)...")
         let task = urlSession.webSocketTask(with: url)
         relayConnections[relayURLString] = task
@@ -342,6 +365,10 @@ final class NIP46Service: ObservableObject {
     private func disconnectRelay(_ relayURLString: String) {
         relayConnections[relayURLString]?.cancel(with: .normalClosure, reason: nil)
         relayConnections.removeValue(forKey: relayURLString)
+        // Cancel any pending reconnection for this relay
+        relayReconnectTasks[relayURLString]?.cancel()
+        relayReconnectTasks.removeValue(forKey: relayURLString)
+        relayReconnectAttempts.removeValue(forKey: relayURLString)
     }
 
     // MARK: - Message handling
@@ -351,6 +378,8 @@ final class NIP46Service: ObservableObject {
             Task { @MainActor in
                 switch result {
                 case .success(let message):
+                    // Successful message means relay is healthy — reset backoff
+                    self?.relayReconnectAttempts[relayURL] = 0
                     switch message {
                     case .string(let text):
                         self?.handleRelayMessage(text, relayURL: relayURL)
@@ -368,8 +397,52 @@ final class NIP46Service: ObservableObject {
                 case .failure(let error):
                     print("[NIP46] ⚠ Relay \(relayURL) disconnected: \(error)")
                     self?.relayConnections.removeValue(forKey: relayURL)
+                    self?.scheduleReconnect(relayURL: relayURL)
                 }
             }
+        }
+    }
+
+    /// Schedules a reconnection attempt with exponential backoff (1s, 2s, 4s, 8s, ... max 30s).
+    /// If the relay still has active sessions that depend on it, reconnection is attempted.
+    private func scheduleReconnect(relayURL: String) {
+        // Only reconnect if at least one session still uses this relay
+        let relayNeeded = sessions.values.contains { $0.relays.contains(relayURL) }
+        guard relayNeeded else {
+            print("[NIP46] Relay \(relayURL) not needed by any session, skipping reconnect")
+            relayReconnectAttempts.removeValue(forKey: relayURL)
+            return
+        }
+
+        // Cancel any existing reconnect timer for this relay
+        relayReconnectTasks[relayURL]?.cancel()
+
+        let attempt = (relayReconnectAttempts[relayURL] ?? 0) + 1
+        relayReconnectAttempts[relayURL] = attempt
+
+        // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 30s (capped)
+        let delay = min(Double(1 << (attempt - 1)), 30.0)
+        print("[NIP46] Scheduling reconnect to \(relayURL) in \(delay)s (attempt \(attempt))")
+
+        relayReconnectTasks[relayURL] = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            } catch {
+                // Task cancelled
+                return
+            }
+            guard let self, !Task.isCancelled else { return }
+
+            // Double-check relay is still needed and not already reconnected
+            let stillNeeded = self.sessions.values.contains { $0.relays.contains(relayURL) }
+            guard stillNeeded, self.relayConnections[relayURL] == nil else {
+                print("[NIP46] Reconnect to \(relayURL) no longer needed (sessions changed or already connected)")
+                self.relayReconnectAttempts.removeValue(forKey: relayURL)
+                return
+            }
+
+            print("[NIP46] Reconnecting to \(relayURL) (attempt \(attempt))...")
+            self.subscribeToRelay(relayURL)
         }
     }
 
@@ -789,6 +862,24 @@ final class NIP46Service: ObservableObject {
             print("[NIP46] ✓ Response sent for \(request.method) (id: \(request.id))")
         } catch {
             print("[NIP46] ✗ Error processing request: \(error)")
+
+            // Send an error response back to the client so it doesn't hang waiting.
+            // If decryption failed, we don't know the request ID — use a placeholder.
+            do {
+                let errorResponse = NIP46Response.error(
+                    id: "error",
+                    message: "Request processing failed: \(error.localizedDescription)"
+                )
+                let encrypted = try encryptForSession(errorResponse, session: session)
+                try await sendResponse(
+                    encryptedContent: encrypted,
+                    toClientPubkey: session.clientPubkey,
+                    relayURL: relayURL
+                )
+                print("[NIP46] ✓ Error response sent to client")
+            } catch {
+                print("[NIP46] ✗ Failed to send error response: \(error)")
+            }
         }
     }
 
@@ -1101,6 +1192,12 @@ final class NIP46Service: ObservableObject {
             task.cancel(with: .normalClosure, reason: nil)
         }
         relayConnections.removeAll()
+        // Cancel all pending reconnection timers
+        for (_, task) in relayReconnectTasks {
+            task.cancel()
+        }
+        relayReconnectTasks.removeAll()
+        relayReconnectAttempts.removeAll()
         sessions.removeAll()
         signerPrivateKey = nil
     }

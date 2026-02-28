@@ -19,6 +19,87 @@ struct NIP46Request: Codable, Sendable {
     let id: String
     let method: String
     let params: [String]
+
+    /// Custom decoding to handle clients that send non-string params (numbers, objects, etc.).
+    /// Coerces each param to its JSON string representation.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        method = try container.decode(String.self, forKey: .method)
+
+        // Try decoding as [String] first (fast path)
+        if let stringParams = try? container.decode([String].self, forKey: .params) {
+            params = stringParams
+        } else {
+            // Fallback: decode as [AnyCodable] and coerce to strings
+            let anyParams = try container.decode([AnyCodableParam].self, forKey: .params)
+            params = anyParams.map { $0.stringValue }
+        }
+    }
+
+    init(id: String, method: String, params: [String]) {
+        self.id = id
+        self.method = method
+        self.params = params
+    }
+}
+
+/// Wrapper for decoding heterogeneous JSON array elements into string representations.
+private struct AnyCodableParam: Decodable {
+    let stringValue: String
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let s = try? container.decode(String.self) {
+            stringValue = s
+        } else if let i = try? container.decode(Int.self) {
+            stringValue = String(i)
+        } else if let d = try? container.decode(Double.self) {
+            stringValue = String(d)
+        } else if let b = try? container.decode(Bool.self) {
+            stringValue = String(b)
+        } else {
+            // For objects/arrays, re-encode as JSON string
+            let rawValue = try container.decode(RawJSON.self)
+            stringValue = rawValue.jsonString
+        }
+    }
+}
+
+/// Captures any JSON value and re-serializes it as a string.
+private struct RawJSON: Decodable {
+    let jsonString: String
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        // Decode as a generic dictionary or array, then re-serialize
+        if let dict = try? container.decode([String: AnyCodableValue].self),
+           let data = try? JSONSerialization.data(withJSONObject: dict.mapValues { $0.value }),
+           let s = String(data: data, encoding: .utf8) {
+            jsonString = s
+        } else if let arr = try? container.decode([AnyCodableValue].self),
+                  let data = try? JSONSerialization.data(withJSONObject: arr.map { $0.value }),
+                  let s = String(data: data, encoding: .utf8) {
+            jsonString = s
+        } else {
+            jsonString = ""
+        }
+    }
+}
+
+/// Wrapper that captures any JSON value as Foundation types for re-serialization.
+private struct AnyCodableValue: Decodable {
+    let value: Any
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let s = try? container.decode(String.self) { value = s }
+        else if let i = try? container.decode(Int.self) { value = i }
+        else if let d = try? container.decode(Double.self) { value = d }
+        else if let b = try? container.decode(Bool.self) { value = b }
+        else if container.decodeNil() { value = NSNull() }
+        else { value = "" }
+    }
 }
 
 /// Outgoing NIP-46 JSON-RPC response.
@@ -159,7 +240,8 @@ enum NIP46MessageHandler {
 
         do {
             // Extract fields — id and sig are optional (clients send unsigned events)
-            guard let kind = dict["kind"] as? Int else {
+            // NSJSONSerialization may return NSNumber; handle both Int and Double
+            guard let kind = (dict["kind"] as? Int) ?? (dict["kind"] as? Double).map({ Int($0) }) else {
                 return .error(id: request.id, message: "sign_event: missing 'kind'")
             }
             let content = dict["content"] as? String ?? ""

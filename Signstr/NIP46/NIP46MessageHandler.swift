@@ -204,6 +204,59 @@ enum NIP46MessageHandler {
         }
     }
 
+    /// Signs an event directly using SchnorrSigner, bypassing the biometric-gated NostrSigner.
+    /// Used for auto-approved safe-kind events where the private key is already in memory.
+    static func handleSignEventDirect(
+        _ request: NIP46Request,
+        signerPubkeyHex: String,
+        signerPrivateKey: Data
+    ) -> NIP46Response {
+        guard let eventJSON = request.params.first else {
+            return .error(id: request.id, message: "sign_event requires an event JSON parameter")
+        }
+
+        guard let eventData = eventJSON.data(using: .utf8),
+              let dict = try? JSONSerialization.jsonObject(with: eventData) as? [String: Any] else {
+            return .error(id: request.id, message: "Invalid event JSON")
+        }
+
+        do {
+            guard let kind = (dict["kind"] as? Int) ?? (dict["kind"] as? Double).map({ Int($0) }) else {
+                return .error(id: request.id, message: "sign_event: missing 'kind'")
+            }
+            let content = dict["content"] as? String ?? ""
+            let tags = dict["tags"] as? [[String]] ?? (dict["tags"] as? [[Any]])?.map { $0.map { "\($0)" } } ?? []
+            let createdAt = dict["created_at"] as? Int ?? Int(Date().timeIntervalSince1970)
+
+            let unsigned = NostrEvent.unsigned(
+                pubkey: signerPubkeyHex,
+                kind: kind,
+                tags: tags,
+                content: content,
+                createdAt: createdAt
+            )
+
+            let eventIdData = NostrEventSerializer.computeEventId(for: unsigned)
+            let eventIdHex = NostrKeyUtils.hexEncode(eventIdData)
+
+            let sigData = try SchnorrSigner.sign(hash: eventIdData, privateKey: signerPrivateKey)
+            let sigHex = NostrKeyUtils.hexEncode(sigData)
+
+            let signed = unsigned.signed(id: eventIdHex, sig: sigHex)
+
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = .sortedKeys
+            let signedJSON = try encoder.encode(signed)
+            guard let signedString = String(data: signedJSON, encoding: .utf8) else {
+                return .error(id: request.id, message: "Failed to encode signed event")
+            }
+
+            return .success(id: request.id, result: signedString)
+        } catch {
+            return .error(id: request.id, message: "sign_event failed: \(error)")
+        }
+    }
+
     // MARK: - Encrypt response
 
     /// Encodes a response to JSON and encrypts it with NIP-44 for sending.

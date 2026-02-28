@@ -537,6 +537,7 @@ final class NIP46Service: ObservableObject {
             print("[NIP46]   Params count: \(request.params.count)")
 
             // 2. For sign_event, check approval policy before prompting
+            var autoApprove = false
             if request.method == "sign_event" {
                 // Parse event details for logging
                 var eventKind = 0
@@ -562,7 +563,7 @@ final class NIP46Service: ObservableObject {
                 let requireApprovalForAll = UserDefaults.standard.bool(forKey: Self.requireApprovalForAllKey)
                 let isSafeKind = Self.safeAutoApproveKinds.contains(eventKind)
                 let safeKindAutoApprove = isSafeKind && !requireApprovalForAll
-                let autoApprove = policyAutoApprove || safeKindAutoApprove
+                autoApprove = policyAutoApprove || safeKindAutoApprove
 
                 print("[NIP46]   Auto-approve decision: policyAutoApprove=\(policyAutoApprove) isSafeKind=\(isSafeKind) requireApprovalForAll=\(requireApprovalForAll) safeKindAutoApprove=\(safeKindAutoApprove) → autoApprove=\(autoApprove)")
 
@@ -620,6 +621,14 @@ final class NIP46Service: ObservableObject {
                 // Return pubkey directly — no biometric auth needed for public data
                 print("[NIP46] Handling get_public_key directly (no biometrics)")
                 response = .success(id: request.id, result: pubkey)
+            } else if request.method == "sign_event", autoApprove, let privKey = signerPrivateKey {
+                // Auto-approved sign_event: sign directly with SchnorrSigner to skip biometrics
+                print("[NIP46] Signing auto-approved event directly (no biometrics)")
+                response = NIP46MessageHandler.handleSignEventDirect(
+                    request,
+                    signerPubkeyHex: signerPubkeyHex!,
+                    signerPrivateKey: privKey
+                )
             } else {
                 print("[NIP46] Dispatching \(request.method) to handler...")
                 response = await NIP46MessageHandler.handleRequest(

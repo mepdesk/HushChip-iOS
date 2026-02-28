@@ -12,6 +12,8 @@
 
 import CryptoKit
 import Foundation
+import UIKit
+import UserNotifications
 
 /// The main NIP-46 service that listens for signing requests from connected clients.
 ///
@@ -1002,6 +1004,22 @@ final class NIP46Service: ObservableObject {
            let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             eventKind = dict["kind"] as? Int ?? 0
             eventContent = dict["content"] as? String ?? ""
+        }
+
+        // Fire a local notification if the app is backgrounded so the user
+        // knows there is a signing request waiting for approval.
+        if UIApplication.shared.applicationState != .active {
+            let notifContent = UNMutableNotificationContent()
+            notifContent.title = "Signing Request"
+            notifContent.body = "\(session.displayName) wants to sign a kind \(eventKind) event"
+            notifContent.sound = .default
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 0.1, repeats: false)
+            let notifRequest = UNNotificationRequest(
+                identifier: "nip46-sign-\(request.id)",
+                content: notifContent,
+                trigger: trigger
+            )
+            try? await UNUserNotificationCenter.current().add(notifRequest)
         }
 
         return await withCheckedContinuation { continuation in

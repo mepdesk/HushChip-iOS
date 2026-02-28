@@ -49,6 +49,10 @@ struct SignstrApp: App {
                     }
                 }
 
+                // Ensure per-identity approval policies are persisted
+                // (fills in defaults for identities created before this feature)
+                im.migrateApprovalPolicies()
+
                 nip46Service.restoreConnections()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
                     withAnimation(.easeOut(duration: 0.5)) {

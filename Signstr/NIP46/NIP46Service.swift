@@ -81,16 +81,8 @@ final class NIP46Service: ObservableObject {
     /// All signer pubkey hexes we're listening for (one per identity).
     private var allSignerPubkeys: Set<String> = []
 
-    /// Event kinds considered safe for auto-approval (no user prompt needed):
-    /// - 0: profile metadata
-    /// - 3: contact list
-    /// - 10000: mute list
-    /// - 10001: pin list
-    /// - 10002: relay list metadata
-    /// - 22242: NIP-42 relay authentication
-    static let safeAutoApproveKinds: Set<Int> = [0, 3, 10000, 10001, 10002, 22242]
-
-    /// UserDefaults key for the "require approval for all events" override toggle.
+    /// Legacy UserDefaults key for the global "require approval for all events" toggle.
+    /// Kept only for reference during migration; the setting is now per-identity.
     static let requireApprovalForAllKey = "signstr.require_approval_for_all"
 
     private let urlSession: URLSession
@@ -134,7 +126,8 @@ final class NIP46Service: ObservableObject {
         allSignerPubkeys.insert(thisPubkeyHex)
 
         print("[NIP46]   Signer pubkey: \(thisPubkeyHex)")
-        print("[NIP46]   Safe auto-approve kinds: \(Self.safeAutoApproveKinds.sorted())")
+        let identityPolicyKinds = identityId.flatMap { IdentityManager.shared.identity(for: $0)?.approvalPolicy.safeKinds.sorted() } ?? SigningApprovalPolicy.default.safeKinds.sorted()
+        print("[NIP46]   Safe auto-approve kinds: \(identityPolicyKinds)")
         print("[NIP46]   Signer privkey (first 4 bytes): \(signerPrivateKey.prefix(4).map { String(format: "%02x", $0) }.joined())")
         // Log conversation key fingerprint for later comparison with decrypt side
         let convKeyHex = session.conversationKey.withUnsafeBytes { Data($0).prefix(8).map { String(format: "%02x", $0) }.joined() }
@@ -813,14 +806,22 @@ final class NIP46Service: ObservableObject {
                     print("[NIP46]   params[0] (first 200): \(request.params.first?.prefix(200) ?? "nil")")
                 }
 
-                // Check auto-approve: per-app policy OR safe-kind auto-approve
+                // Check auto-approve: per-app policy OR per-identity safe-kind auto-approve
                 let policyAutoApprove = ApprovalPolicyStore.shouldAutoApprove(for: session.clientPubkey)
-                let requireApprovalForAll = UserDefaults.standard.bool(forKey: Self.requireApprovalForAllKey)
-                let isSafeKind = Self.safeAutoApproveKinds.contains(eventKind)
-                let safeKindAutoApprove = isSafeKind && !requireApprovalForAll
+
+                // Look up the per-identity approval policy from the identity that owns this connection
+                let identityPolicy: SigningApprovalPolicy = {
+                    if let pubkey = signerPubkeyHex,
+                       let identity = IdentityManager.shared.identity(forPubkey: pubkey) {
+                        return identity.approvalPolicy
+                    }
+                    return .default
+                }()
+                let isSafeKind = identityPolicy.safeKinds.contains(eventKind)
+                let safeKindAutoApprove = isSafeKind && !identityPolicy.requireApprovalForAll
                 autoApprove = policyAutoApprove || safeKindAutoApprove
 
-                print("[NIP46]   Auto-approve decision: policyAutoApprove=\(policyAutoApprove) isSafeKind=\(isSafeKind) requireApprovalForAll=\(requireApprovalForAll) safeKindAutoApprove=\(safeKindAutoApprove) → autoApprove=\(autoApprove)")
+                print("[NIP46] ▶ DECISION POINT 1: autoApprove=\(autoApprove) (policyAutoApprove=\(policyAutoApprove) isSafeKind=\(isSafeKind) requireApprovalForAll=\(identityPolicy.requireApprovalForAll) safeKindAutoApprove=\(safeKindAutoApprove))")
 
                 if safeKindAutoApprove {
                     print("[NIP46]   Safe kind \(eventKind) — auto-approving without prompt")
@@ -830,6 +831,7 @@ final class NIP46Service: ObservableObject {
                 // Sign immediately, fire-and-forget the relay send, return instantly
                 // to unblock the queue for the next request.
                 if autoApprove, let privKey = signerPrivateKey {
+                    print("[NIP46] ▶ DECISION POINT 2: Taking FAST PATH (auto-approved, SchnorrSigner direct, no Face ID)")
                     let signStart = CFAbsoluteTimeGetCurrent()
                     let response = NIP46MessageHandler.handleSignEventDirect(
                         request,
@@ -888,12 +890,15 @@ final class NIP46Service: ObservableObject {
 
                 let approved: Bool
                 if autoApprove {
+                    print("[NIP46] ▶ DECISION POINT 3: autoApprove=true, skipping approval UI")
                     approved = true
                 } else {
+                    print("[NIP46] ▶ DECISION POINT 3: autoApprove=false, showing approval UI for kind \(eventKind)")
                     approved = await requestUserApproval(
                         for: request,
                         session: session
                     )
+                    print("[NIP46] ▶ DECISION POINT 4: user tapped \(approved ? "APPROVE" : "REJECT") for kind \(eventKind)")
                 }
 
                 // Log the signing request
@@ -930,6 +935,7 @@ final class NIP46Service: ObservableObject {
             }
 
             // 3. Dispatch to handler
+            print("[NIP46] ▶ DECISION POINT 5: Reached dispatch. method=\(request.method) signerPubkeyHex=\(signerPubkeyHex?.prefix(8) ?? "nil") signerPrivateKey=\(signerPrivateKey != nil ? "present(\(signerPrivateKey!.count)bytes)" : "nil")")
             let response: NIP46Response
 
             if request.method == "get_public_key", let pubkey = signerPubkeyHex {
@@ -938,38 +944,42 @@ final class NIP46Service: ObservableObject {
                 response = .success(id: request.id, result: pubkey)
             } else if request.method == "sign_event", let pubkey = signerPubkeyHex, let privKey = signerPrivateKey {
                 // User-approved sign_event — require Face ID, then sign with identity key
+                print("[NIP46] ▶ DECISION POINT 6: sign_event dispatch — Face ID + SchnorrSigner path")
                 print("[NIP46] Face ID required for kind \(eventKind) — authenticating...")
 
                 let context = LAContext()
                 var authError: NSError?
                 let canUseBiometrics = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &authError)
+                print("[NIP46] ▶ canUseBiometrics=\(canUseBiometrics) authError=\(authError?.localizedDescription ?? "nil")")
 
                 var faceIdPassed = false
                 if canUseBiometrics {
+                    print("[NIP46] ▶ calling Face ID evaluatePolicy...")
                     do {
                         faceIdPassed = try await context.evaluatePolicy(
                             .deviceOwnerAuthenticationWithBiometrics,
                             localizedReason: "Sign a Nostr event"
                         )
+                        print("[NIP46] ▶ Face ID evaluatePolicy returned: \(faceIdPassed)")
                     } catch {
-                        print("[NIP46] Face ID failed: \(error)")
+                        print("[NIP46] ▶ Face ID evaluatePolicy threw error: \(error)")
                     }
                 } else {
                     // No biometrics available (e.g. simulator) — allow signing
-                    print("[NIP46] Biometrics unavailable — skipping Face ID")
+                    print("[NIP46] ▶ Biometrics unavailable — skipping Face ID")
                     faceIdPassed = true
                 }
 
                 if faceIdPassed {
                     let identityName = IdentityManager.shared.identity(forPubkey: pubkey)?.displayName ?? pubkey.prefix(8).description
-                    print("[NIP46] Face ID passed — signing with identity \(identityName)")
+                    print("[NIP46] ▶ Face ID passed — signing with SchnorrSigner for identity \(identityName)")
                     response = NIP46MessageHandler.handleSignEventDirect(
                         request,
                         signerPubkeyHex: pubkey,
                         signerPrivateKey: privKey
                     )
                 } else {
-                    print("[NIP46] Face ID rejected — returning error to client")
+                    print("[NIP46] ▶ Face ID REJECTED — returning error to client")
                     response = .error(id: request.id, message: "Biometric authentication failed")
                 }
             } else {

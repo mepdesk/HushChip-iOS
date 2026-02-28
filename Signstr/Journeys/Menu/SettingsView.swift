@@ -28,8 +28,6 @@ struct SettingsView: View {
 
     @State var expertModeIsOn: Bool = false
     @State var debugModeIsOn: Bool = false
-    @State var requireApprovalForAll: Bool = UserDefaults.standard.bool(forKey: NIP46Service.requireApprovalForAllKey)
-
     // MARK: - Literals
     let title = "settings"
     let showLogsButtonTitle = String(localized: "settings.showLogs")
@@ -99,22 +97,6 @@ struct SettingsView: View {
                                    isOn: $debugModeIsOn,
                                    onToggle: { newValue in
 
-                    })
-
-                    Spacer()
-                        .frame(height: SettingsView.dimensions.verticalGroupSeparator)
-
-                    SatoText(text: "Require approval for all events", style: .SKMenuItemTitle)
-                    Spacer()
-                        .frame(height: SettingsView.dimensions.verticalInsideGroupSeparator)
-                    SatoText(text: "When enabled, every signing request requires manual approval, including profile and relay updates.", style: .SKMenuItemSubtitle)
-                    Spacer()
-                        .frame(height: SettingsView.dimensions.verticalInsideGroupSeparator)
-                    SettingsToggle(title: "Require approval for all events",
-                                   backgroundColor: Color.sgBgSurface,
-                                   isOn: $requireApprovalForAll,
-                                   onToggle: { newValue in
-                        UserDefaults.standard.set(newValue, forKey: NIP46Service.requireApprovalForAllKey)
                     })
 
                     Spacer()

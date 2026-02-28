@@ -25,6 +25,7 @@ struct IdentityTabView: View {
     @State private var backupNsec: String?
     @State private var selectedIdentityId: String?
     @State private var showAddIdentity = false
+    @State private var showSafeKindsEditor = false
 
     private var identity: NostrIdentity? {
         guard let id = selectedIdentityId else { return identityManager.activeIdentity }
@@ -180,6 +181,11 @@ struct IdentityTabView: View {
                 // Actions
                 actionsSection(identity: identity)
 
+                Spacer().frame(height: 32)
+
+                // Signing Policy
+                signingPolicySection(identity: identity)
+
                 Spacer().frame(height: 40)
 
                 // Go Air-Gapped upsell
@@ -332,6 +338,102 @@ struct IdentityTabView: View {
             .padding(.horizontal, Dimensions.cardPadding)
             .padding(.vertical, 14)
             .background(Color.sgBgRaised)
+        }
+    }
+
+    // MARK: - Signing Policy
+
+    private func signingPolicySection(identity: NostrIdentity) -> some View {
+        VStack(spacing: 0) {
+            // Section label
+            Text("SIGNING POLICY")
+                .font(.outfit(.regular, size: 9))
+                .tracking(3)
+                .foregroundColor(.sgTextGhost)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 4)
+
+            Spacer().frame(height: 8)
+
+            VStack(spacing: 1) {
+                // Require approval for all toggle
+                HStack(spacing: 12) {
+                    Image(systemName: "hand.raised")
+                        .font(.system(size: 13, weight: .light))
+                        .foregroundColor(.sgTextMuted)
+                        .frame(width: 24)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("REQUIRE APPROVAL FOR ALL")
+                            .font(.outfit(.regular, size: 10))
+                            .tracking(3)
+                            .foregroundColor(.sgTextBody)
+
+                        Text("Override safe kinds — prompt for every event")
+                            .font(.outfit(.light, size: 10))
+                            .foregroundColor(.sgTextFaint)
+                    }
+
+                    Spacer()
+
+                    Toggle("", isOn: Binding(
+                        get: { identity.approvalPolicy.requireApprovalForAll },
+                        set: { newValue in
+                            var policy = identity.approvalPolicy
+                            policy.requireApprovalForAll = newValue
+                            identityManager.updateApprovalPolicy(id: identity.id, policy: policy)
+                        }
+                    ))
+                    .toggleStyle(SKToggleStyle(
+                        onColor: Color.sgBorderHover,
+                        offColor: Color.sgBgSurface,
+                        thumbColor: Color.sgTextMuted
+                    ))
+                    .labelsHidden()
+                    .frame(width: 50)
+                }
+                .padding(.horizontal, Dimensions.cardPadding)
+                .padding(.vertical, 14)
+                .background(Color.sgBgRaised)
+
+                // Safe event types row
+                Button(action: { showSafeKindsEditor = true }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "checkmark.shield")
+                            .font(.system(size: 13, weight: .light))
+                            .foregroundColor(.sgTextMuted)
+                            .frame(width: 24)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("SAFE EVENT TYPES")
+                                .font(.outfit(.regular, size: 10))
+                                .tracking(3)
+                                .foregroundColor(.sgTextBody)
+
+                            Text("\(identity.approvalPolicy.safeKinds.count) kind\(identity.approvalPolicy.safeKinds.count == 1 ? "" : "s") auto-approved")
+                                .font(.outfit(.light, size: 10))
+                                .foregroundColor(.sgTextFaint)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.sgTextGhost)
+                    }
+                    .padding(.horizontal, Dimensions.cardPadding)
+                    .padding(.vertical, 14)
+                    .background(Color.sgBgRaised)
+                }
+            }
+            .cornerRadius(Dimensions.cardCornerRadius)
+            .overlay(
+                RoundedRectangle(cornerRadius: Dimensions.cardCornerRadius)
+                    .stroke(Color.sgBorder, lineWidth: 1)
+            )
+        }
+        .sheet(isPresented: $showSafeKindsEditor) {
+            SafeKindsEditorView(identityId: identity.id)
         }
     }
 
@@ -560,5 +662,188 @@ struct BackupNsecSheetView: View {
             .padding(.horizontal, 24)
         }
         .preferredColorScheme(.dark)
+    }
+}
+
+// MARK: - Safe kinds editor
+
+struct SafeKindsEditorView: View {
+    let identityId: String
+    @ObservedObject private var identityManager = IdentityManager.shared
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var showAddKind = false
+    @State private var newKindText = ""
+
+    private var identity: NostrIdentity? {
+        identityManager.identity(for: identityId)
+    }
+
+    private var sortedKinds: [Int] {
+        (identity?.approvalPolicy.safeKinds ?? []).sorted()
+    }
+
+    var body: some View {
+        ZStack {
+            Color.sgBg.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                // Header
+                Spacer().frame(height: 12)
+
+                Capsule()
+                    .fill(Color.sgBorder)
+                    .frame(width: 36, height: 4)
+
+                Spacer().frame(height: 24)
+
+                Text("SAFE EVENT TYPES")
+                    .font(.outfit(.regular, size: 9))
+                    .tracking(3)
+                    .foregroundColor(.sgTextGhost)
+
+                Spacer().frame(height: 8)
+
+                Text("Events with these kinds are signed automatically.")
+                    .font(.outfit(.light, size: 12))
+                    .foregroundColor(.sgTextFaint)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+
+                Spacer().frame(height: 20)
+
+                // Kind list
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        ForEach(sortedKinds, id: \.self) { kind in
+                            HStack(spacing: 12) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(SigningApprovalPolicy.label(for: kind))
+                                        .font(.outfit(.regular, size: 13))
+                                        .foregroundColor(.sgTextBright)
+
+                                    Text("Kind \(kind)")
+                                        .font(.system(size: 11, design: .monospaced))
+                                        .foregroundColor(.sgTextFaint)
+                                }
+
+                                Spacer()
+
+                                Button(action: { removeKind(kind) }) {
+                                    Image(systemName: "minus.circle.fill")
+                                        .font(.system(size: 18))
+                                        .foregroundColor(.sgDanger)
+                                }
+                            }
+                            .padding(.horizontal, Dimensions.cardPadding)
+                            .padding(.vertical, 10)
+
+                            if kind != sortedKinds.last {
+                                Rectangle()
+                                    .fill(Color.sgBorder)
+                                    .frame(height: 1)
+                                    .padding(.horizontal, Dimensions.cardPadding)
+                            }
+                        }
+
+                        if sortedKinds.isEmpty {
+                            Text("No safe kinds configured.\nAll events will require approval.")
+                                .font(.outfit(.light, size: 12))
+                                .foregroundColor(.sgTextFaint)
+                                .multilineTextAlignment(.center)
+                                .padding(.vertical, 20)
+                        }
+                    }
+                    .background(Color.sgBgRaised)
+                    .cornerRadius(Dimensions.cardCornerRadius)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Dimensions.cardCornerRadius)
+                            .stroke(Color.sgBorder, lineWidth: 1)
+                    )
+                    .padding(.horizontal, 24)
+
+                    Spacer().frame(height: 16)
+
+                    // Add kind button
+                    Button(action: { showAddKind = true }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 12))
+                            Text("ADD KIND")
+                                .font(.outfit(.regular, size: 10))
+                                .tracking(3)
+                        }
+                        .foregroundColor(.sgTextBright)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .background(Color.sgBorder)
+                        .cornerRadius(Dimensions.buttonCornerRadius)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Dimensions.buttonCornerRadius)
+                                .stroke(Color.sgBorderHover, lineWidth: 1)
+                        )
+                    }
+                    .padding(.horizontal, 24)
+
+                    Spacer().frame(height: 16)
+
+                    // Reset to defaults button
+                    Button(action: resetToDefaults) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrow.counterclockwise")
+                                .font(.system(size: 12))
+                            Text("RESET TO DEFAULTS")
+                                .font(.outfit(.regular, size: 10))
+                                .tracking(3)
+                        }
+                        .foregroundColor(.sgTextMuted)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .background(Color.sgBgSurface)
+                        .cornerRadius(Dimensions.buttonCornerRadius)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Dimensions.buttonCornerRadius)
+                                .stroke(Color.sgBorder, lineWidth: 1)
+                        )
+                    }
+                    .padding(.horizontal, 24)
+                }
+            }
+        }
+        .alert("Add Event Kind", isPresented: $showAddKind) {
+            TextField("Kind number (e.g. 1)", text: $newKindText)
+                .keyboardType(.numberPad)
+            Button("Add") {
+                if let kind = Int(newKindText) {
+                    addKind(kind)
+                }
+                newKindText = ""
+            }
+            Button("Cancel", role: .cancel) {
+                newKindText = ""
+            }
+        } message: {
+            Text("Enter the numeric event kind to auto-approve.")
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private func removeKind(_ kind: Int) {
+        guard var policy = identity?.approvalPolicy else { return }
+        policy.safeKinds.remove(kind)
+        identityManager.updateApprovalPolicy(id: identityId, policy: policy)
+    }
+
+    private func addKind(_ kind: Int) {
+        guard var policy = identity?.approvalPolicy else { return }
+        policy.safeKinds.insert(kind)
+        identityManager.updateApprovalPolicy(id: identityId, policy: policy)
+    }
+
+    private func resetToDefaults() {
+        guard var policy = identity?.approvalPolicy else { return }
+        policy.safeKinds = SigningApprovalPolicy.default.safeKinds
+        identityManager.updateApprovalPolicy(id: identityId, policy: policy)
     }
 }

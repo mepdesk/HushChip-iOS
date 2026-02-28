@@ -11,6 +11,38 @@
 
 import Foundation
 
+// MARK: - Per-identity signing approval policy
+
+/// Controls which event kinds are auto-approved for a given identity.
+struct SigningApprovalPolicy: Codable, Equatable {
+    /// Event kinds considered safe (auto-approved without user prompt).
+    var safeKinds: Set<Int>
+
+    /// When true, every signing request requires manual approval regardless of safe kinds.
+    var requireApprovalForAll: Bool
+
+    /// Default policy for new identities.
+    static let `default` = SigningApprovalPolicy(
+        safeKinds: [0, 3, 10000, 10001, 10002, 22242],
+        requireApprovalForAll: false
+    )
+
+    /// Human-readable labels for well-known event kinds.
+    static let kindLabels: [Int: String] = [
+        0: "Profile",
+        3: "Contacts",
+        10000: "Mute List",
+        10001: "Pin List",
+        10002: "Relay List",
+        22242: "Relay Auth",
+    ]
+
+    /// Returns a label for the given kind, or "Kind <n>" for unknown kinds.
+    static func label(for kind: Int) -> String {
+        kindLabels[kind] ?? "Kind \(kind)"
+    }
+}
+
 // MARK: - NostrIdentity model
 
 /// Represents a single Nostr identity (key pair).
@@ -24,6 +56,29 @@ struct NostrIdentity: Identifiable, Codable, Equatable {
     let pubkeyHex: String
     /// When this identity was created/imported.
     let createdAt: Date
+
+    /// Per-identity signing approval policy (which kinds to auto-approve).
+    var approvalPolicy: SigningApprovalPolicy
+
+    init(id: String, displayName: String, pubkeyHex: String, createdAt: Date,
+         approvalPolicy: SigningApprovalPolicy = .default) {
+        self.id = id
+        self.displayName = displayName
+        self.pubkeyHex = pubkeyHex
+        self.createdAt = createdAt
+        self.approvalPolicy = approvalPolicy
+    }
+
+    /// Decode with fallback: if `approvalPolicy` is missing (pre-migration data),
+    /// use the default policy.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        displayName = try container.decode(String.self, forKey: .displayName)
+        pubkeyHex = try container.decode(String.self, forKey: .pubkeyHex)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        approvalPolicy = try container.decodeIfPresent(SigningApprovalPolicy.self, forKey: .approvalPolicy) ?? .default
+    }
 
     /// The npub (bech32-encoded public key). Derived from pubkeyHex.
     var npub: String? {
@@ -126,7 +181,8 @@ final class IdentityManager: ObservableObject {
             id: id,
             displayName: name,
             pubkeyHex: pubkeyHex,
-            createdAt: Date()
+            createdAt: Date(),
+            approvalPolicy: .default
         )
 
         // Store nsec in Keychain
@@ -191,6 +247,14 @@ final class IdentityManager: ObservableObject {
         print("[IdentityManager] Renamed identity \(id.prefix(8))... to '\(name)'")
     }
 
+    /// Updates the signing approval policy for an identity.
+    func updateApprovalPolicy(id: String, policy: SigningApprovalPolicy) {
+        guard let index = identities.firstIndex(where: { $0.id == id }) else { return }
+        identities[index].approvalPolicy = policy
+        saveToDefaults()
+        print("[IdentityManager] Updated approval policy for \(id.prefix(8))... (safeKinds: \(policy.safeKinds.sorted()), requireAll: \(policy.requireApprovalForAll))")
+    }
+
     // MARK: - Key access
 
     /// Loads the raw 32-byte nsec for an identity from Keychain.
@@ -246,6 +310,16 @@ final class IdentityManager: ObservableObject {
         } catch {
             print("[IdentityManager] Migration failed: \(error)")
         }
+    }
+
+    /// Ensures every identity has a persisted approval policy.
+    /// Called on launch; the `init(from:)` decoder already fills in defaults for
+    /// identities saved before this feature existed, so we just re-save to persist.
+    func migrateApprovalPolicies() {
+        guard !identities.isEmpty else { return }
+        // Re-save so that any default-filled policies are written to disk
+        saveToDefaults()
+        print("[IdentityManager] Ensured approval policies are persisted for \(identities.count) identities")
     }
 
     /// Migrates existing NIP-46 connections to belong to a specific identity.

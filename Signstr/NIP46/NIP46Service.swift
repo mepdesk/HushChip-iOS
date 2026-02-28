@@ -540,8 +540,17 @@ final class NIP46Service: ObservableObject {
                 if let eventJSON = request.params.first,
                    let data = eventJSON.data(using: .utf8),
                    let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    eventKind = dict["kind"] as? Int ?? 0
+                    // NSJSONSerialization may return NSNumber; handle both Int and Double
+                    if let k = dict["kind"] as? Int {
+                        eventKind = k
+                    } else if let k = dict["kind"] as? Double {
+                        eventKind = Int(k)
+                    }
                     eventContent = dict["content"] as? String ?? ""
+                    print("[NIP46]   sign_event kind: \(eventKind) (raw: \(String(describing: dict["kind"])))")
+                } else {
+                    print("[NIP46]   sign_event: FAILED to parse event JSON from params[0]")
+                    print("[NIP46]   params[0] (first 200): \(request.params.first?.prefix(200) ?? "nil")")
                 }
 
                 // Check auto-approve: per-app policy OR safe-kind auto-approve
@@ -550,6 +559,8 @@ final class NIP46Service: ObservableObject {
                 let isSafeKind = Self.safeAutoApproveKinds.contains(eventKind)
                 let safeKindAutoApprove = isSafeKind && !requireApprovalForAll
                 let autoApprove = policyAutoApprove || safeKindAutoApprove
+
+                print("[NIP46]   Auto-approve decision: policyAutoApprove=\(policyAutoApprove) isSafeKind=\(isSafeKind) requireApprovalForAll=\(requireApprovalForAll) safeKindAutoApprove=\(safeKindAutoApprove) → autoApprove=\(autoApprove)")
 
                 if safeKindAutoApprove {
                     print("[NIP46]   Safe kind \(eventKind) — auto-approving without prompt")

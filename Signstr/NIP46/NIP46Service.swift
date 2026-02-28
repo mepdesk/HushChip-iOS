@@ -182,6 +182,14 @@ final class NIP46Service: ObservableObject {
             let relays = session.relays
             let convKey = session.conversationKey
 
+            // Capture this identity's key material for the connect response
+            let connectPubkey = thisPubkeyHex
+            let connectPrivKey = signerPrivateKey
+
+            // Log which identity is sending the connect response
+            let identityName = identityId.flatMap { IdentityManager.shared.identity(for: $0)?.displayName } ?? "unknown"
+            print("[NIP46] Sending connect response for identity: \(identityName) pubkey: \(connectPubkey.prefix(8))")
+
             print("[NIP46] Client-initiated flow — sending connect response (NIP-44)")
             print("[NIP46]   Secret: \(secret.isEmpty ? "empty" : String(secret.prefix(8)) + "...")")
 
@@ -221,7 +229,9 @@ final class NIP46Service: ObservableObject {
                         try await sendResponse(
                             encryptedContent: encrypted,
                             toClientPubkey: clientPubkey,
-                            relayURL: relayURL
+                            relayURL: relayURL,
+                            explicitPubkey: connectPubkey,
+                            explicitPrivateKey: connectPrivKey
                         )
                         print("[NIP46] ✓ Connect response sent to \(relayURL)\(isFallback ? " (fallback)" : "")")
                     }
@@ -844,14 +854,19 @@ final class NIP46Service: ObservableObject {
                     let encryptedResponse = try encryptForSession(response, session: session)
 
                     // Fire-and-forget: send to relay without awaiting confirmation
+                    // Capture identity keys now — instance props may change before Task runs
                     let clientPubkey = session.clientPubkey
+                    let capturedPubkey = signerPubkeyHex
+                    let capturedPrivKey = signerPrivateKey
                     let sendStart = CFAbsoluteTimeGetCurrent()
                     Task { [weak self] in
                         do {
                             try await self?.sendResponse(
                                 encryptedContent: encryptedResponse,
                                 toClientPubkey: clientPubkey,
-                                relayURL: relayURL
+                                relayURL: relayURL,
+                                explicitPubkey: capturedPubkey,
+                                explicitPrivateKey: capturedPrivKey
                             )
                             let sendEnd = CFAbsoluteTimeGetCurrent()
                             let queueToSign = Int((signStart - queuedAt) * 1000)
@@ -920,13 +935,13 @@ final class NIP46Service: ObservableObject {
                 // Return pubkey directly — no biometric auth needed for public data
                 print("[NIP46] Handling get_public_key directly (no biometrics)")
                 response = .success(id: request.id, result: pubkey)
-            } else if request.method == "sign_event", let privKey = signerPrivateKey {
-                // User-approved sign_event (autoApprove was false but user tapped approve)
-                print("[NIP46] Signing user-approved event directly (no biometrics)")
-                response = NIP46MessageHandler.handleSignEventDirect(
+            } else if request.method == "sign_event" {
+                // User-approved sign_event — require Face ID via SoftwareSigner
+                print("[NIP46] Signing user-approved event via SoftwareSigner (Face ID required)")
+                response = await NIP46MessageHandler.handleRequest(
                     request,
-                    signerPubkeyHex: signerPubkeyHex!,
-                    signerPrivateKey: privKey
+                    signer: signer,
+                    session: session
                 )
             } else {
                 print("[NIP46] Dispatching \(request.method) to handler...")
@@ -1126,13 +1141,18 @@ final class NIP46Service: ObservableObject {
     }
 
     /// Builds a kind 24133 response event and sends it to the relay.
+    /// When `explicitPubkey` / `explicitPrivateKey` are provided they override
+    /// the instance-level `signerPubkeyHex` / `signerPrivateKey`. This ensures
+    /// the correct identity's key is used for multi-identity connect responses.
     private func sendResponse(
         encryptedContent: String,
         toClientPubkey: String,
-        relayURL: String
+        relayURL: String,
+        explicitPubkey: String? = nil,
+        explicitPrivateKey: Data? = nil
     ) async throws {
-        guard let signerPubkey = signerPubkeyHex,
-              let privKey = signerPrivateKey else {
+        guard let signerPubkey = explicitPubkey ?? signerPubkeyHex,
+              let privKey = explicitPrivateKey ?? signerPrivateKey else {
             print("[NIP46] ⚠ Cannot send response — missing signer pubkey or private key")
             return
         }

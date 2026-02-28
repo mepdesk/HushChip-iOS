@@ -23,20 +23,48 @@ struct IdentityTabView: View {
     @State private var showDeleteConfirm = false
     @State private var showBackupNsec = false
     @State private var backupNsec: String?
+    @State private var selectedIdentityId: String?
+    @State private var showAddIdentity = false
 
     private var identity: NostrIdentity? {
-        identityManager.activeIdentity
+        guard let id = selectedIdentityId else { return identityManager.activeIdentity }
+        return identityManager.identity(for: id) ?? identityManager.activeIdentity
     }
 
     var body: some View {
         ZStack {
             Color.sgBg.ignoresSafeArea()
 
-            if let identity = identity {
-                identityContent(identity: identity)
+            if !identityManager.hasIdentities {
+                noIdentityContent
+            } else if let identity = identity {
+                VStack(spacing: 0) {
+                    IdentityPickerView(
+                        identityManager: identityManager,
+                        selectedIdentityId: $selectedIdentityId,
+                        onIdentityTap: { _ in },
+                        onAddIdentity: { showAddIdentity = true }
+                    )
+                    .environmentObject(nip46Service)
+
+                    Rectangle()
+                        .fill(Color.sgBorder)
+                        .frame(height: 1)
+
+                    identityContent(identity: identity)
+                }
             } else {
                 noIdentityContent
             }
+        }
+        .onAppear {
+            if selectedIdentityId == nil {
+                selectedIdentityId = identityManager.activeIdentity?.id
+            }
+        }
+        .fullScreenCover(isPresented: $showAddIdentity) {
+            AddIdentityView()
+                .environmentObject(nip46Service)
         }
         .alert("Rename Identity", isPresented: $showRenameAlert) {
             TextField("Display name", text: $renameText)

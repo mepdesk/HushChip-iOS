@@ -64,8 +64,11 @@ final class NIP46Service: ObservableObject {
     /// Event kinds considered safe for auto-approval (no user prompt needed):
     /// - 0: profile metadata
     /// - 3: contact list
+    /// - 10000: mute list
+    /// - 10001: pin list
     /// - 10002: relay list metadata
-    static let safeAutoApproveKinds: Set<Int> = [0, 3, 10002]
+    /// - 22242: NIP-42 relay authentication
+    static let safeAutoApproveKinds: Set<Int> = [0, 3, 10000, 10001, 10002, 22242]
 
     /// UserDefaults key for the "require approval for all events" override toggle.
     static let requireApprovalForAllKey = "signstr.require_approval_for_all"
@@ -103,6 +106,7 @@ final class NIP46Service: ObservableObject {
             signerPubkeyHex = NostrKeyUtils.hexEncode(pubkeyData)
         }
         print("[NIP46]   Signer pubkey: \(signerPubkeyHex ?? "nil")")
+        print("[NIP46]   Safe auto-approve kinds: \(Self.safeAutoApproveKinds.sorted())")
         print("[NIP46]   Signer privkey (first 4 bytes): \(signerPrivateKey.prefix(4).map { String(format: "%02x", $0) }.joined())")
         // Log conversation key fingerprint for later comparison with decrypt side
         let convKeyHex = session.conversationKey.withUnsafeBytes { Data($0).prefix(8).map { String(format: "%02x", $0) }.joined() }

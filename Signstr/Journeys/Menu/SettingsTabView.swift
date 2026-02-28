@@ -13,9 +13,14 @@ struct SettingsTabView: View {
 
     @State private var defaultPolicy: ApprovalPolicy = ApprovalPolicyStore.defaultPolicy
     @State private var biometricsEnabled: Bool = true
-    @State private var showDeleteKeyConfirm = false
-    @State private var showDeleteKeyFinal = false
+    @State private var notificationsEnabled: Bool = true
+    @State private var showDeleteAllConfirm = false
+    @State private var showDeleteAllFinal = false
     @State private var showPolicyPicker = false
+    @State private var showExportAllKeys = false
+    @State private var debugUnlocked = false
+    @State private var versionTapCount = 0
+    @State private var showDebugBadge = false
 
     private var biometricTypeName: String {
         let context = LAContext()
@@ -73,25 +78,32 @@ struct SettingsTabView: View {
 
                         Spacer().frame(height: 32)
 
+                        // ── NOTIFICATIONS section ──
+                        sectionLabel("NOTIFICATIONS")
+                        Spacer().frame(height: 8)
+
+                        notificationsToggleRow
+
+                        Spacer().frame(height: 32)
+
                         // ── GENERAL section ──
                         sectionLabel("GENERAL")
                         Spacer().frame(height: 8)
 
-                        settingsRow(icon: "list.clipboard", title: "Event Log", subtitle: "Signing request history") {
-                            cardState.homeNavigationPath.append(NavigationRoutes.eventLog)
-                        }
-                        Spacer().frame(height: 8)
-                        settingsRow(icon: "doc.text", title: "Debug Logs", subtitle: "View application logs") {
-                            cardState.homeNavigationPath.append(NavigationRoutes.logs)
-                        }
-                        Spacer().frame(height: 8)
                         settingsRow(icon: "info.circle", title: "About", subtitle: "Version, licence, and credits") {
                             cardState.homeNavigationPath.append(NavigationRoutes.about)
                         }
+
+                        #if DEBUG
                         Spacer().frame(height: 8)
                         settingsRow(icon: "ant", title: "NIP-46 Test Client", subtitle: "Debug end-to-end remote signing") {
                             cardState.homeNavigationPath.append(NavigationRoutes.nip46TestClient)
                         }
+                        Spacer().frame(height: 8)
+                        settingsRow(icon: "doc.text", title: "Developer Options", subtitle: "View application logs") {
+                            cardState.homeNavigationPath.append(NavigationRoutes.logs)
+                        }
+                        #endif
 
                         Spacer().frame(height: 32)
 
@@ -99,13 +111,13 @@ struct SettingsTabView: View {
                         dangerSectionLabel("DANGER ZONE")
                         Spacer().frame(height: 8)
 
-                        dangerRow(icon: "exclamationmark.shield", title: "Emergency Export", subtitle: "Reveal nsec with QR code") {
-                            cardState.homeNavigationPath.append(NavigationRoutes.emergencyExport)
+                        dangerRow(icon: "key", title: "Export All Keys", subtitle: "Reveal all identity nsecs") {
+                            exportAllKeys()
                         }
                         Spacer().frame(height: 8)
 
-                        dangerRow(icon: "trash", title: "Delete Key", subtitle: "Permanently wipe key from device") {
-                            showDeleteKeyConfirm = true
+                        dangerRow(icon: "trash", title: "Delete All Data", subtitle: "Wipe all identities and connections") {
+                            showDeleteAllConfirm = true
                         }
 
                         Spacer().frame(height: 60)
@@ -147,22 +159,28 @@ struct SettingsTabView: View {
             biometricsEnabled = UserDefaults.standard.object(forKey: Constants.Keys.biometricsEnabled) == nil
                 ? true
                 : UserDefaults.standard.bool(forKey: Constants.Keys.biometricsEnabled)
+            notificationsEnabled = UserDefaults.standard.object(forKey: "notificationsEnabled") == nil
+                ? true
+                : UserDefaults.standard.bool(forKey: "notificationsEnabled")
         }
-        .alert("Delete Key?", isPresented: $showDeleteKeyConfirm) {
+        .alert("Delete All Data?", isPresented: $showDeleteAllConfirm) {
             Button("Cancel", role: .cancel) {}
-            Button("Delete Key", role: .destructive) {
-                showDeleteKeyFinal = true
+            Button("Delete Everything", role: .destructive) {
+                showDeleteAllFinal = true
             }
         } message: {
-            Text("This will permanently delete your Nostr private key from this device. All connected apps will be disconnected. This action cannot be undone.\n\nMake sure you have a backup of your nsec before proceeding.")
+            Text("This will permanently delete ALL Nostr identities, private keys, and connections from this device. This action cannot be undone.\n\nMake sure you have backups of all your nsecs before proceeding.")
         }
-        .alert("Are you sure?", isPresented: $showDeleteKeyFinal) {
+        .alert("Are you absolutely sure?", isPresented: $showDeleteAllFinal) {
             Button("Cancel", role: .cancel) {}
             Button("Delete Forever", role: .destructive) {
-                deleteKeyAndReset()
+                deleteAllDataAndReset()
             }
         } message: {
-            Text("This is your last chance. Your key will be wiped and all sessions will be disconnected.")
+            Text("This is your last chance. All identities, keys, and sessions will be wiped permanently.")
+        }
+        .sheet(isPresented: $showExportAllKeys) {
+            ExportAllKeysSheet()
         }
     }
 
@@ -330,18 +348,86 @@ struct SettingsTabView: View {
         .presentationDragIndicator(.visible)
     }
 
-    // MARK: - Delete key
+    // MARK: - Notifications toggle row
 
-    private func deleteKeyAndReset() {
+    private var notificationsToggleRow: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "bell")
+                .font(.system(size: 16, weight: .light))
+                .foregroundColor(.sgTextMuted)
+                .frame(width: 24)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Notifications")
+                    .font(.outfit(.regular, size: 13))
+                    .foregroundColor(.sgTextBright)
+
+                Text("Alert when signing approval is needed")
+                    .font(.outfit(.light, size: 11))
+                    .foregroundColor(.sgTextFaint)
+            }
+
+            Spacer()
+
+            Toggle("", isOn: $notificationsEnabled)
+                .toggleStyle(SKToggleStyle(
+                    onColor: Color.sgBorderHover,
+                    offColor: Color.sgBgSurface,
+                    thumbColor: Color.sgTextMuted
+                ))
+                .labelsHidden()
+                .frame(width: 50)
+                .onChange(of: notificationsEnabled) { newValue in
+                    UserDefaults.standard.set(newValue, forKey: "notificationsEnabled")
+                }
+        }
+        .padding(Dimensions.cardPadding)
+        .background(Color.sgBgRaised)
+        .cornerRadius(Dimensions.cardCornerRadius)
+        .overlay(
+            RoundedRectangle(cornerRadius: Dimensions.cardCornerRadius)
+                .stroke(Color.sgBorder, lineWidth: 1)
+        )
+    }
+
+    // MARK: - Export all keys
+
+    private func exportAllKeys() {
+        let context = LAContext()
+        var error: NSError?
+        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
+            // No biometrics available — fall through to show sheet anyway
+            showExportAllKeys = true
+            return
+        }
+
+        context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "Authenticate to export your keys") { success, _ in
+            guard success else { return }
+            DispatchQueue.main.async {
+                showExportAllKeys = true
+            }
+        }
+    }
+
+    // MARK: - Delete all data
+
+    private func deleteAllDataAndReset() {
         // Disconnect all NIP-46 sessions
         nip46Service.disconnectAll()
 
-        // Wipe key from Keychain/Secure Enclave
+        // Delete all connections
+        NIP46ConnectionStore.deleteAll()
+
+        // Delete all identities and their Keychain entries
+        IdentityManager.shared.deleteAllData()
+
+        // Wipe legacy key from Keychain/Secure Enclave
         try? KeyManager.deleteKey()
 
         // Clear stored policies and signing log
         UserDefaults.standard.removeObject(forKey: "signstr.approval_policies")
         UserDefaults.standard.removeObject(forKey: "signstr.first_approval_times")
+        UserDefaults.standard.removeObject(forKey: "notificationsEnabled")
 
         // Reset key setup flag so onboarding shows key setup
         UserDefaults.standard.set(false, forKey: Constants.Keys.keySetupComplete)
@@ -450,5 +536,143 @@ struct SettingsTabView: View {
                     .stroke(Color.sgDangerBorder, lineWidth: 1)
             )
         }
+    }
+}
+
+// MARK: - Export All Keys Sheet
+
+private struct ExportAllKeysSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var copiedId: String?
+
+    private var identities: [NostrIdentity] {
+        IdentityManager.shared.identities
+    }
+
+    var body: some View {
+        ZStack {
+            Color.sgBg.ignoresSafeArea()
+
+            VStack(spacing: 20) {
+                Spacer().frame(height: 40)
+
+                Image(systemName: "key.fill")
+                    .font(.system(size: 28, weight: .light))
+                    .foregroundColor(.sgDanger)
+
+                Text("ALL PRIVATE KEYS")
+                    .font(.outfit(.regular, size: 10))
+                    .tracking(5)
+                    .foregroundColor(.sgDanger)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("WARNING")
+                        .font(.outfit(.regular, size: 9))
+                        .tracking(3)
+                        .foregroundColor(.sgDanger)
+
+                    Text("Anyone who sees these keys controls your Nostr identities. Copy them to a secure password manager.")
+                        .font(.outfit(.light, size: 12))
+                        .foregroundColor(.sgTextFaint)
+                        .lineSpacing(4)
+                }
+                .padding(Dimensions.cardPadding)
+                .background(Color.sgDangerBg)
+                .cornerRadius(Dimensions.cardCornerRadius)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Dimensions.cardCornerRadius)
+                        .stroke(Color.sgDangerBorder, lineWidth: 1)
+                )
+
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 12) {
+                        ForEach(identities) { identity in
+                            exportKeyRow(identity)
+                        }
+                    }
+                }
+
+                Button(action: { dismiss() }) {
+                    Text("DONE")
+                        .font(.outfit(.regular, size: 10))
+                        .tracking(3)
+                        .foregroundColor(.sgTextMuted)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .background(Color.sgBgSurface)
+                        .cornerRadius(Dimensions.buttonCornerRadius)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Dimensions.buttonCornerRadius)
+                                .stroke(Color.sgBorder, lineWidth: 1)
+                        )
+                }
+
+                Spacer().frame(height: 20)
+            }
+            .padding(.horizontal, 24)
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private func exportKeyRow(_ identity: NostrIdentity) -> some View {
+        let nsec: String? = {
+            guard let data = IdentityManager.shared.loadNsec(for: identity.id) else { return nil }
+            return try? NostrKeyUtils.nsecEncode(data)
+        }()
+
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(identity.displayName)
+                    .font(.outfit(.regular, size: 12))
+                    .foregroundColor(.sgTextBright)
+
+                Spacer()
+
+                if let nsec = nsec {
+                    Button(action: {
+                        UIPasteboard.general.string = nsec
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        copiedId = identity.id
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 30) {
+                            if UIPasteboard.general.string == nsec {
+                                UIPasteboard.general.string = ""
+                            }
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: copiedId == identity.id ? "checkmark" : "doc.on.doc")
+                                .font(.system(size: 10))
+                            Text(copiedId == identity.id ? "COPIED" : "COPY")
+                                .font(.outfit(.regular, size: 9))
+                                .tracking(2)
+                        }
+                        .foregroundColor(.sgTextBright)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.sgBorder)
+                        .cornerRadius(6)
+                    }
+                }
+            }
+
+            if let nsec = nsec {
+                Text(nsec)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(.sgTextFaint)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("Key not available")
+                    .font(.outfit(.light, size: 11))
+                    .foregroundColor(.sgTextGhost)
+            }
+        }
+        .padding(Dimensions.cardPadding)
+        .background(Color.sgBgRaised)
+        .cornerRadius(Dimensions.cardCornerRadius)
+        .overlay(
+            RoundedRectangle(cornerRadius: Dimensions.cardCornerRadius)
+                .stroke(Color.sgBorder, lineWidth: 1)
+        )
     }
 }

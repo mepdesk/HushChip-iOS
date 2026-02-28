@@ -374,6 +374,26 @@ final class IdentityManager: ObservableObject {
         print("[IdentityManager] Migrated \(updated.count) connections to identity \(identityId.prefix(8))...")
     }
 
+    // MARK: - Delete all data
+
+    /// Wipes all identities, their Keychain entries, and related UserDefaults.
+    func deleteAllData() {
+        // Delete all nsec entries from Keychain
+        for identity in identities {
+            KeychainHelper.shared.delete(key: Self.keychainPrefix + identity.id)
+        }
+
+        // Clear identity list
+        identities = []
+        activeIdentityId = nil
+
+        // Remove from UserDefaults
+        UserDefaults.standard.removeObject(forKey: Self.identitiesKey)
+        UserDefaults.standard.removeObject(forKey: Self.activeIdentityKey)
+
+        print("[IdentityManager] Deleted all identities and Keychain entries")
+    }
+
     // MARK: - Persistence
 
     private func saveToDefaults() {

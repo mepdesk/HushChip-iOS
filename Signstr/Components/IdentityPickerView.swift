@@ -35,7 +35,7 @@ struct IdentityPickerView: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
                 ForEach(identityManager.identities) { identity in
                     identityChip(identity)
                 }
@@ -171,6 +171,8 @@ struct IdentityPickerView: View {
                 Text("Add")
                     .font(.outfit(.regular, size: 10))
                     .foregroundColor(.sgTextFaint)
+                    .lineLimit(1)
+                    .frame(maxWidth: 60)
             }
         }
     }

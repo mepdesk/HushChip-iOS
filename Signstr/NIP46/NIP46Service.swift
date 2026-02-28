@@ -1149,7 +1149,10 @@ final class NIP46Service: ObservableObject {
 
         // Fire a local notification if the app is backgrounded so the user
         // knows there is a signing request waiting for approval.
-        if UIApplication.shared.applicationState != .active {
+        let notificationsEnabled = UserDefaults.standard.object(forKey: "notificationsEnabled") == nil
+            ? true
+            : UserDefaults.standard.bool(forKey: "notificationsEnabled")
+        if notificationsEnabled && UIApplication.shared.applicationState != .active {
             let notifContent = UNMutableNotificationContent()
             notifContent.title = "Signing Request"
             notifContent.body = "\(session.displayName) wants to sign a kind \(eventKind) event"

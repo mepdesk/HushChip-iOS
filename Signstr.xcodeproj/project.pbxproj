@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		FF00000100000001000000F1 /* NostrProfileFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000200000002000000F2 /* NostrProfileFetcher.swift */; };
 		EE00000200000002000000E2 /* ApprovalPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000100000001000000E1 /* ApprovalPolicy.swift */; };
 		EE00000400000004000000E4 /* SigningLogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000300000003000000E3 /* SigningLogStore.swift */; };
 		EE00000600000006000000E6 /* AppSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000500000005000000E5 /* AppSettingsView.swift */; };
@@ -219,6 +220,7 @@
 		BB00004500000045000000F5 /* SoftwareSigner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoftwareSigner.swift; sourceTree = "<group>"; };
 		BB00004700000047000000F7 /* KeyStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyStorageTests.swift; sourceTree = "<group>"; };
 		BB00005100000051000000A1 /* IdentityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentityManager.swift; sourceTree = "<group>"; };
+		FF00000200000002000000F2 /* NostrProfileFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NostrProfileFetcher.swift; sourceTree = "<group>"; };
 		BB00005300000053000000A3 /* IdentityPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentityPickerView.swift; sourceTree = "<group>"; };
 		BB00005500000055000000A5 /* AddIdentityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddIdentityView.swift; sourceTree = "<group>"; };
 		CC00000300000003000000A3 /* IdentityTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentityTabView.swift; sourceTree = "<group>"; };
@@ -553,6 +555,7 @@
 				BB00004100000041000000F1 /* SecureEnclaveKeyStore.swift */,
 				BB00004300000043000000F3 /* KeyManager.swift */,
 				BB00005100000051000000A1 /* IdentityManager.swift */,
+				FF00000200000002000000F2 /* NostrProfileFetcher.swift */,
 				BB00004500000045000000F5 /* SoftwareSigner.swift */,
 			);
 			path = Nostr;
@@ -768,6 +771,7 @@
 				BB00004000000040000000F0 /* SecureEnclaveKeyStore.swift in Sources */,
 				BB00004200000042000000F2 /* KeyManager.swift in Sources */,
 				BB00004400000044000000F4 /* SoftwareSigner.swift in Sources */,
+				FF00000100000001000000F1 /* NostrProfileFetcher.swift in Sources */,
 				DD0000110000001A000000BA /* NIP04.swift in Sources */,
 				DD00001100000011000000B1 /* NIP44.swift in Sources */,
 				DD00001200000012000000B2 /* NIP46ConnectionParser.swift in Sources */,

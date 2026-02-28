@@ -136,19 +136,13 @@ struct IdentityTabView: View {
                 Spacer().frame(height: 24)
 
                 // Large avatar
-                ZStack {
-                    Circle()
-                        .fill(Color.sgBgSurface)
-                        .frame(width: 80, height: 80)
-                        .overlay(
-                            Circle()
-                                .stroke(Color.sgBorderHover, lineWidth: 2)
-                        )
-
-                    Text(identity.initials)
-                        .font(.outfit(.medium, size: 28))
-                        .foregroundColor(.sgTextBright)
-                }
+                ProfileAvatarView(
+                    pictureURL: identity.pictureURL,
+                    initials: identity.initials,
+                    size: 80,
+                    fontSize: 28,
+                    isSelected: true
+                )
 
                 Spacer().frame(height: 16)
 

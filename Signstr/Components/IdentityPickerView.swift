@@ -90,22 +90,13 @@ struct IdentityPickerView: View {
             onIdentityTap?(identity)
         }) {
             VStack(spacing: 6) {
-                // Avatar circle with initials
-                ZStack {
-                    Circle()
-                        .fill(isSelected ? Color.sgBorderHover : Color.sgBgSurface)
-                        .frame(width: 48, height: 48)
-
-                    if isSelected {
-                        Circle()
-                            .stroke(Color.sgTextBright, lineWidth: 2)
-                            .frame(width: 52, height: 52)
-                    }
-
-                    Text(identity.initials)
-                        .font(.outfit(.medium, size: 16))
-                        .foregroundColor(isSelected ? .sgTextWhite : .sgTextMuted)
-                }
+                // Avatar circle with profile picture or initials
+                ProfileAvatarView(
+                    pictureURL: identity.pictureURL,
+                    initials: identity.initials,
+                    size: 48,
+                    isSelected: isSelected
+                )
 
                 // Name
                 Text(identity.displayName)

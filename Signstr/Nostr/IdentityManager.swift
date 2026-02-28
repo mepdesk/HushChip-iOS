@@ -60,17 +60,25 @@ struct NostrIdentity: Identifiable, Codable, Equatable {
     /// Per-identity signing approval policy (which kinds to auto-approve).
     var approvalPolicy: SigningApprovalPolicy
 
+    /// Profile picture URL from the kind 0 event (nil = not yet fetched or no picture set).
+    var pictureURL: String?
+
+    /// Whether the user has manually renamed this identity (prevents auto-update from kind 0).
+    var userHasRenamed: Bool
+
     init(id: String, displayName: String, pubkeyHex: String, createdAt: Date,
-         approvalPolicy: SigningApprovalPolicy = .default) {
+         approvalPolicy: SigningApprovalPolicy = .default,
+         pictureURL: String? = nil, userHasRenamed: Bool = false) {
         self.id = id
         self.displayName = displayName
         self.pubkeyHex = pubkeyHex
         self.createdAt = createdAt
         self.approvalPolicy = approvalPolicy
+        self.pictureURL = pictureURL
+        self.userHasRenamed = userHasRenamed
     }
 
-    /// Decode with fallback: if `approvalPolicy` is missing (pre-migration data),
-    /// use the default policy.
+    /// Decode with fallback for fields added after initial release.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
@@ -78,6 +86,8 @@ struct NostrIdentity: Identifiable, Codable, Equatable {
         pubkeyHex = try container.decode(String.self, forKey: .pubkeyHex)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         approvalPolicy = try container.decodeIfPresent(SigningApprovalPolicy.self, forKey: .approvalPolicy) ?? .default
+        pictureURL = try container.decodeIfPresent(String.self, forKey: .pictureURL)
+        userHasRenamed = try container.decodeIfPresent(Bool.self, forKey: .userHasRenamed) ?? false
     }
 
     /// The npub (bech32-encoded public key). Derived from pubkeyHex.
@@ -199,6 +209,10 @@ final class IdentityManager: ObservableObject {
 
         saveToDefaults()
         print("[IdentityManager] Added identity '\(name)' (\(pubkeyHex.prefix(8))...)")
+
+        // Fetch profile metadata from relays
+        NostrProfileFetcher.shared.fetchProfile(for: identity)
+
         return identity
     }
 
@@ -239,12 +253,25 @@ final class IdentityManager: ObservableObject {
 
     // MARK: - Rename
 
-    /// Renames an identity.
+    /// Renames an identity (manual rename — sets `userHasRenamed` to prevent auto-override).
     func renameIdentity(id: String, name: String) {
         guard let index = identities.firstIndex(where: { $0.id == id }) else { return }
         identities[index].displayName = name
+        identities[index].userHasRenamed = true
         saveToDefaults()
         print("[IdentityManager] Renamed identity \(id.prefix(8))... to '\(name)'")
+    }
+
+    /// Updates profile metadata from a kind 0 event (picture URL and display name).
+    /// Only updates display name if the user hasn't manually renamed the identity.
+    func updateProfileMetadata(id: String, pictureURL: String?, profileName: String?) {
+        guard let index = identities.firstIndex(where: { $0.id == id }) else { return }
+        identities[index].pictureURL = pictureURL
+        if let name = profileName, !name.isEmpty, !identities[index].userHasRenamed {
+            identities[index].displayName = name
+        }
+        saveToDefaults()
+        print("[IdentityManager] Updated profile for \(id.prefix(8))... picture: \(pictureURL?.prefix(40) ?? "nil") name: \(profileName ?? "nil")")
     }
 
     /// Updates the signing approval policy for an identity.

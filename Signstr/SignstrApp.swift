@@ -54,6 +54,10 @@ struct SignstrApp: App {
                 im.migrateApprovalPolicies()
 
                 nip46Service.restoreConnections()
+
+                // Fetch Nostr profile metadata (picture, name) for all identities
+                NostrProfileFetcher.shared.fetchAllProfiles()
+
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
                     withAnimation(.easeOut(duration: 0.5)) {
                         showSplash = false

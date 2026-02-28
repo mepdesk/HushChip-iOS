@@ -43,6 +43,14 @@ final class NIP46Service: ObservableObject {
     /// which cause Swift Task continuation misuse).
     private var requestQueue: [(encryptedContent: String, session: NIP46Session, relayURL: String)] = []
 
+    /// Tracks already-processed incoming event IDs to deduplicate events that arrive
+    /// from multiple relays. Keyed by event ID, value is the time it was processed.
+    /// Cleared every 5 minutes to prevent unbounded memory growth.
+    private var processedEventIDs: [String: Date] = [:]
+
+    /// Timestamp of the last dedup cleanup sweep.
+    private var lastDedupCleanup: Date = Date()
+
     /// Whether a request is currently being processed (waiting for user approval).
     private var isProcessingRequest = false
 
@@ -52,6 +60,15 @@ final class NIP46Service: ObservableObject {
     /// The signer's raw private key data (needed for NIP-44 conversation keys).
     /// In production, this is decrypted via biometrics only when needed.
     private var signerPrivateKey: Data?
+
+    /// Event kinds considered safe for auto-approval (no user prompt needed):
+    /// - 0: profile metadata
+    /// - 3: contact list
+    /// - 10002: relay list metadata
+    static let safeAutoApproveKinds: Set<Int> = [0, 3, 10002]
+
+    /// UserDefaults key for the "require approval for all events" override toggle.
+    static let requireApprovalForAllKey = "signstr.require_approval_for_all"
 
     private let urlSession: URLSession
 
@@ -351,6 +368,16 @@ final class NIP46Service: ObservableObject {
         print("[NIP46]   Our signer pubkey: \(signerPubkeyHex ?? "nil")")
         print("[NIP46]   Content length: \(encryptedContent.count) chars")
 
+        // Dedup: skip events we've already processed (same event arrives on multiple relays)
+        cleanupProcessedEventIDs()
+        if eventId != "?", processedEventIDs[eventId] != nil {
+            print("[NIP46]   Skipping duplicate event \(eventId.prefix(16))...")
+            return
+        }
+        if eventId != "?" {
+            processedEventIDs[eventId] = Date()
+        }
+
         // Find the session for this client
         guard let session = sessions[senderPubkey] else {
             print("[NIP46] ⚠ No session found for sender \(senderPubkey.prefix(16))...")
@@ -517,7 +544,16 @@ final class NIP46Service: ObservableObject {
                     eventContent = dict["content"] as? String ?? ""
                 }
 
-                let autoApprove = ApprovalPolicyStore.shouldAutoApprove(for: session.clientPubkey)
+                // Check auto-approve: per-app policy OR safe-kind auto-approve
+                let policyAutoApprove = ApprovalPolicyStore.shouldAutoApprove(for: session.clientPubkey)
+                let requireApprovalForAll = UserDefaults.standard.bool(forKey: Self.requireApprovalForAllKey)
+                let isSafeKind = Self.safeAutoApproveKinds.contains(eventKind)
+                let safeKindAutoApprove = isSafeKind && !requireApprovalForAll
+                let autoApprove = policyAutoApprove || safeKindAutoApprove
+
+                if safeKindAutoApprove {
+                    print("[NIP46]   Safe kind \(eventKind) — auto-approving without prompt")
+                }
 
                 let approved: Bool
                 if autoApprove {
@@ -537,6 +573,7 @@ final class NIP46Service: ObservableObject {
                     content: eventContent,
                     approved: approved,
                     autoApproved: autoApprove && approved,
+                    safeKindAutoApproved: safeKindAutoApprove && approved,
                     eventJSON: request.params.first ?? ""
                 )
 
@@ -876,6 +913,22 @@ final class NIP46Service: ObservableObject {
                 print("[NIP46] ⚠ WARNING: No OK received from \(pending.relayURL) within 5s for event \(eventId.prefix(16))... — event may have been dropped")
                 self.pendingOKs.removeValue(forKey: eventId)
             }
+        }
+    }
+
+    // MARK: - Dedup cleanup
+
+    /// Removes processed event IDs older than 5 minutes. Called before each dedup check.
+    private func cleanupProcessedEventIDs() {
+        let now = Date()
+        guard now.timeIntervalSince(lastDedupCleanup) >= 300 else { return }
+        lastDedupCleanup = now
+        let cutoff = now.addingTimeInterval(-300)
+        let before = processedEventIDs.count
+        processedEventIDs = processedEventIDs.filter { $0.value > cutoff }
+        let removed = before - processedEventIDs.count
+        if removed > 0 {
+            print("[NIP46] Dedup cleanup: removed \(removed) stale event IDs (\(processedEventIDs.count) remaining)")
         }
     }
 

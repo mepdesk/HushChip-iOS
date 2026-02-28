@@ -21,6 +21,8 @@ struct SigningLogEntry: Identifiable, Codable {
     let contentPreview: String
     let approved: Bool
     let autoApproved: Bool
+    /// True when auto-approved specifically because the event kind is in the safe set (0, 3, 10002).
+    let safeKindAutoApproved: Bool
     let eventJSON: String
 
     init(
@@ -32,6 +34,7 @@ struct SigningLogEntry: Identifiable, Codable {
         contentPreview: String,
         approved: Bool,
         autoApproved: Bool = false,
+        safeKindAutoApproved: Bool = false,
         eventJSON: String = ""
     ) {
         self.id = id
@@ -42,10 +45,11 @@ struct SigningLogEntry: Identifiable, Codable {
         self.contentPreview = contentPreview
         self.approved = approved
         self.autoApproved = autoApproved
+        self.safeKindAutoApproved = safeKindAutoApproved
         self.eventJSON = eventJSON
     }
 
-    // Backwards-compatible decoding: older entries won't have autoApproved.
+    // Backwards-compatible decoding: older entries may lack newer fields.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
@@ -56,6 +60,7 @@ struct SigningLogEntry: Identifiable, Codable {
         contentPreview = try container.decode(String.self, forKey: .contentPreview)
         approved = try container.decode(Bool.self, forKey: .approved)
         autoApproved = try container.decodeIfPresent(Bool.self, forKey: .autoApproved) ?? false
+        safeKindAutoApproved = try container.decodeIfPresent(Bool.self, forKey: .safeKindAutoApproved) ?? false
         eventJSON = try container.decode(String.self, forKey: .eventJSON)
     }
 
@@ -65,6 +70,7 @@ struct SigningLogEntry: Identifiable, Codable {
 
     var statusBadge: String {
         if !approved { return "REJECTED" }
+        if safeKindAutoApproved { return "SAFE-AUTO" }
         if autoApproved { return "AUTO-APPROVED" }
         return "APPROVED"
     }
@@ -103,6 +109,7 @@ final class SigningLogStore: ObservableObject {
         content: String,
         approved: Bool,
         autoApproved: Bool = false,
+        safeKindAutoApproved: Bool = false,
         eventJSON: String = ""
     ) {
         let entry = SigningLogEntry(
@@ -112,6 +119,7 @@ final class SigningLogStore: ObservableObject {
             contentPreview: String(content.prefix(500)),
             approved: approved,
             autoApproved: autoApproved,
+            safeKindAutoApproved: safeKindAutoApproved,
             eventJSON: eventJSON
         )
         addEntry(entry)

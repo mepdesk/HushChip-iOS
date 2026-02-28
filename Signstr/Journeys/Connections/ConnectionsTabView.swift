@@ -13,24 +13,60 @@ import SwiftUI
 
 struct ConnectionsTabView: View {
     @EnvironmentObject var nip46Service: NIP46Service
+    @ObservedObject var identityManager = IdentityManager.shared
 
     @State private var showAddConnection = false
     @State private var selectedSession: NIP46Session?
-    @State private var hasKey = KeyManager.keyExists()
+    @State private var selectedIdentityId: String?
+    @State private var showAddIdentity = false
+    @State private var navigateToIdentityDetail: NostrIdentity?
+
+    /// Sessions filtered to the currently selected identity.
+    private var filteredSessions: [NIP46Session] {
+        guard let identityId = selectedIdentityId else {
+            return nip46Service.activeSessions
+        }
+        return nip46Service.sessions(forIdentity: identityId)
+    }
 
     var body: some View {
         ZStack {
             Color.sgBg.ignoresSafeArea()
 
-            if !hasKey {
+            if !identityManager.hasIdentities {
                 noKeyContent
-            } else if nip46Service.activeSessions.isEmpty {
-                emptyContent
             } else {
-                sessionListContent
+                VStack(spacing: 0) {
+                    // Identity picker
+                    IdentityPickerView(
+                        identityManager: identityManager,
+                        selectedIdentityId: $selectedIdentityId,
+                        onIdentityTap: { identity in
+                            navigateToIdentityDetail = identity
+                        },
+                        onAddIdentity: {
+                            showAddIdentity = true
+                        }
+                    )
+                    .environmentObject(nip46Service)
+
+                    Rectangle()
+                        .fill(Color.sgBorder)
+                        .frame(height: 1)
+
+                    if filteredSessions.isEmpty {
+                        emptyContent
+                    } else {
+                        sessionListContent
+                    }
+                }
             }
         }
-        .onAppear { hasKey = KeyManager.keyExists() }
+        .onAppear {
+            if selectedIdentityId == nil {
+                selectedIdentityId = identityManager.activeIdentity?.id
+            }
+        }
         .fullScreenCover(isPresented: $showAddConnection) {
             AddConnectionView()
                 .environmentObject(nip46Service)
@@ -48,6 +84,10 @@ struct ConnectionsTabView: View {
                     nip46Service.removeSession(clientPubkey: session.clientPubkey)
                 }
             }
+        }
+        .fullScreenCover(isPresented: $showAddIdentity) {
+            AddIdentityView()
+                .environmentObject(nip46Service)
         }
     }
 
@@ -110,7 +150,7 @@ struct ConnectionsTabView: View {
     private var sessionListContent: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
-                Spacer().frame(height: 32)
+                Spacer().frame(height: 20)
 
                 Text("CONNECTED APPS")
                     .font(.outfit(.regular, size: 10))
@@ -119,12 +159,12 @@ struct ConnectionsTabView: View {
 
                 Spacer().frame(height: 20)
 
-                ForEach(nip46Service.activeSessions) { session in
+                ForEach(filteredSessions) { session in
                     Button(action: { selectedSession = session }) {
                         sessionRow(session)
                     }
 
-                    if session.id != nip46Service.activeSessions.last?.id {
+                    if session.id != filteredSessions.last?.id {
                         Rectangle()
                             .fill(Color.sgBorder)
                             .frame(height: 1)

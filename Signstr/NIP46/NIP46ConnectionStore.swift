@@ -28,6 +28,20 @@ struct SavedNIP46Connection: Codable, Equatable {
     let flow: String // "clientInitiated" or "signerInitiated"
     /// Permissions string from the original connection URI.
     let permissions: String?
+    /// The identity UUID this connection belongs to (nil for pre-migration connections).
+    let identityId: String?
+
+    init(clientPubkey: String, clientName: String?, relayURLs: [String], signerPubkey: String,
+         encryption: String, flow: String, permissions: String?, identityId: String? = nil) {
+        self.clientPubkey = clientPubkey
+        self.clientName = clientName
+        self.relayURLs = relayURLs
+        self.signerPubkey = signerPubkey
+        self.encryption = encryption
+        self.flow = flow
+        self.permissions = permissions
+        self.identityId = identityId
+    }
 }
 
 /// Manages persistence of NIP-46 connections.
@@ -113,6 +127,18 @@ enum NIP46ConnectionStore {
         }
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
         print("[NIP46-Store] Deleted all saved connections")
+    }
+
+    // MARK: - Identity-aware queries
+
+    /// Returns all saved connections for a specific identity.
+    static func loadAll(forIdentity identityId: String) -> [SavedNIP46Connection] {
+        loadAll().filter { $0.identityId == identityId }
+    }
+
+    /// Replaces the entire connection list (used by migration).
+    static func replaceAll(_ connections: [SavedNIP46Connection]) {
+        saveAll(connections)
     }
 
     // MARK: - Private

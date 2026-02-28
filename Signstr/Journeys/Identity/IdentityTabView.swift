@@ -7,49 +7,69 @@
 // (at your option) any later version.
 //
 //  IdentityTabView.swift
-//  Signstr — Identity tab: npub display, QR code, copy, Go Air-Gapped upsell
+//  Signstr — Identity tab: shows details for the active identity
 
 import SwiftUI
 import CoreImage.CIFilterBuiltins
+import LocalAuthentication
 
 struct IdentityTabView: View {
-    @State private var npub: String?
-    @State private var isLoading = true
-    @State private var errorMessage: String?
+    @EnvironmentObject var nip46Service: NIP46Service
+    @ObservedObject var identityManager = IdentityManager.shared
+
     @State private var showCopiedFeedback = false
+    @State private var showRenameAlert = false
+    @State private var renameText = ""
+    @State private var showDeleteConfirm = false
+    @State private var showBackupNsec = false
+    @State private var backupNsec: String?
+
+    private var identity: NostrIdentity? {
+        identityManager.activeIdentity
+    }
 
     var body: some View {
         ZStack {
             Color.sgBg.ignoresSafeArea()
 
-            if isLoading {
-                loadingContent
-            } else if let npub = npub {
-                identityContent(npub: npub)
+            if let identity = identity {
+                identityContent(identity: identity)
             } else {
-                noKeyContent
+                noIdentityContent
             }
         }
-        .onAppear(perform: loadNpub)
-    }
-
-    // MARK: - Loading
-
-    private var loadingContent: some View {
-        VStack(spacing: 20) {
-            ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .sgTextMuted))
-                .scaleEffect(1.2)
-
-            Text("Loading identity...")
-                .font(.outfit(.light, size: 14))
-                .foregroundColor(.sgTextMuted)
+        .alert("Rename Identity", isPresented: $showRenameAlert) {
+            TextField("Display name", text: $renameText)
+            Button("Save") {
+                if let id = identity?.id, !renameText.isEmpty {
+                    identityManager.renameIdentity(id: id, name: renameText)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        .alert("Delete Identity?", isPresented: $showDeleteConfirm) {
+            Button("Delete", role: .destructive) {
+                if let id = identity?.id {
+                    try? identityManager.removeIdentity(id: id)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will permanently delete this identity and all its connections. This cannot be undone.")
+        }
+        .sheet(isPresented: $showBackupNsec) {
+            if let nsec = backupNsec {
+                BackupNsecSheetView(nsec: nsec, onDismiss: {
+                    showBackupNsec = false
+                    backupNsec = nil
+                })
+            }
         }
     }
 
-    // MARK: - No key stored
+    // MARK: - No identity
 
-    private var noKeyContent: some View {
+    private var noIdentityContent: some View {
         VStack(spacing: 16) {
             Spacer()
 
@@ -74,12 +94,11 @@ struct IdentityTabView: View {
 
     // MARK: - Identity content
 
-    private func identityContent(npub: String) -> some View {
+    private func identityContent(identity: NostrIdentity) -> some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
                 Spacer().frame(height: 32)
 
-                // Section label
                 Text("YOUR IDENTITY")
                     .font(.outfit(.regular, size: 10))
                     .tracking(5)
@@ -87,18 +106,51 @@ struct IdentityTabView: View {
 
                 Spacer().frame(height: 24)
 
-                // QR code
-                qrCodeView(for: npub)
+                // Large avatar
+                ZStack {
+                    Circle()
+                        .fill(Color.sgBgSurface)
+                        .frame(width: 80, height: 80)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.sgBorderHover, lineWidth: 2)
+                        )
 
-                Spacer().frame(height: 24)
-
-                // npub display card
-                npubCard(npub: npub)
+                    Text(identity.initials)
+                        .font(.outfit(.medium, size: 28))
+                        .foregroundColor(.sgTextBright)
+                }
 
                 Spacer().frame(height: 16)
 
-                // Copy button
-                copyButton(npub: npub)
+                // Display name
+                Text(identity.displayName)
+                    .font(.outfit(.regular, size: 20))
+                    .foregroundColor(.sgTextWhite)
+
+                Spacer().frame(height: 8)
+
+                // Connection count
+                let connectionCount = nip46Service.sessions(forIdentity: identity.id).count
+                Text("\(connectionCount) connection\(connectionCount == 1 ? "" : "s")")
+                    .font(.outfit(.light, size: 12))
+                    .foregroundColor(.sgTextFaint)
+
+                Spacer().frame(height: 24)
+
+                // QR code
+                if let npub = identity.npub {
+                    qrCodeView(for: npub)
+                    Spacer().frame(height: 24)
+                    npubCard(npub: npub)
+                    Spacer().frame(height: 16)
+                    copyButton(npub: npub)
+                }
+
+                Spacer().frame(height: 32)
+
+                // Actions
+                actionsSection(identity: identity)
 
                 Spacer().frame(height: 40)
 
@@ -146,12 +198,10 @@ struct IdentityTabView: View {
                 .tracking(3)
                 .foregroundColor(.sgTextGhost)
 
-            // Truncated display
             Text(truncateNpub(npub))
                 .font(.system(size: 14, design: .monospaced))
                 .foregroundColor(.sgTextBody)
 
-            // Full npub (smaller)
             Text(npub)
                 .font(.system(size: 10, design: .monospaced))
                 .foregroundColor(.sgTextFaint)
@@ -173,8 +223,7 @@ struct IdentityTabView: View {
     private func copyButton(npub: String) -> some View {
         Button(action: {
             UIPasteboard.general.string = npub
-            let generator = UIImpactFeedbackGenerator(style: .medium)
-            generator.impactOccurred()
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             showCopiedFeedback = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 showCopiedFeedback = false
@@ -200,7 +249,65 @@ struct IdentityTabView: View {
         .animation(.easeInOut(duration: 0.2), value: showCopiedFeedback)
     }
 
-    // MARK: - Go Air-Gapped upsell card
+    // MARK: - Actions
+
+    private func actionsSection(identity: NostrIdentity) -> some View {
+        VStack(spacing: 1) {
+            actionRow(icon: "pencil", label: "RENAME") {
+                renameText = identity.displayName
+                showRenameAlert = true
+            }
+
+            actionRow(icon: "doc.on.doc", label: "COPY NPUB") {
+                if let npub = identity.npub {
+                    UIPasteboard.general.string = npub
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                }
+            }
+
+            actionRow(icon: "key", label: "BACK UP NSEC") {
+                backUpKey(identity: identity)
+            }
+
+            if identityManager.identities.count > 1 {
+                actionRow(icon: "trash", label: "DELETE IDENTITY", isDanger: true) {
+                    showDeleteConfirm = true
+                }
+            }
+        }
+        .cornerRadius(Dimensions.cardCornerRadius)
+        .overlay(
+            RoundedRectangle(cornerRadius: Dimensions.cardCornerRadius)
+                .stroke(Color.sgBorder, lineWidth: 1)
+        )
+    }
+
+    private func actionRow(icon: String, label: String, isDanger: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .light))
+                    .foregroundColor(isDanger ? .sgDanger : .sgTextMuted)
+                    .frame(width: 24)
+
+                Text(label)
+                    .font(.outfit(.regular, size: 10))
+                    .tracking(3)
+                    .foregroundColor(isDanger ? .sgDanger : .sgTextBody)
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.sgTextGhost)
+            }
+            .padding(.horizontal, Dimensions.cardPadding)
+            .padding(.vertical, 14)
+            .background(Color.sgBgRaised)
+        }
+    }
+
+    // MARK: - Go Air-Gapped upsell
 
     private var airGappedCard: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -264,23 +371,26 @@ struct IdentityTabView: View {
 
     // MARK: - Helpers
 
-    private func loadNpub() {
-        guard KeyManager.keyExists() else {
-            isLoading = false
+    private func backUpKey(identity: NostrIdentity) {
+        let context = LAContext()
+        var error: NSError?
+        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
+            // Fallback: load without biometrics (e.g. simulator)
+            if let nsec = identityManager.loadNsec(for: identity.id),
+               let nsecStr = try? NostrKeyUtils.nsecEncode(nsec) {
+                backupNsec = nsecStr
+                showBackupNsec = true
+            }
             return
         }
 
-        DispatchQueue.global(qos: .userInitiated).async {
-            do {
-                let derivedNpub = try KeyManager.deriveNpub()
-                DispatchQueue.main.async {
-                    npub = derivedNpub
-                    isLoading = false
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    errorMessage = error.localizedDescription
-                    isLoading = false
+        context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "Authenticate to back up your key") { success, _ in
+            guard success else { return }
+            DispatchQueue.main.async {
+                if let nsec = identityManager.loadNsec(for: identity.id),
+                   let nsecStr = try? NostrKeyUtils.nsecEncode(nsec) {
+                    backupNsec = nsecStr
+                    showBackupNsec = true
                 }
             }
         }
@@ -288,9 +398,7 @@ struct IdentityTabView: View {
 
     private func truncateNpub(_ npub: String) -> String {
         guard npub.count > 20 else { return npub }
-        let prefix = npub.prefix(12)
-        let suffix = npub.suffix(8)
-        return "\(prefix)...\(suffix)"
+        return "\(npub.prefix(12))...\(npub.suffix(8))"
     }
 
     private func generateQRCode(from string: String) -> UIImage? {
@@ -309,5 +417,120 @@ struct IdentityTabView: View {
         }
 
         return UIImage(cgImage: cgImage)
+    }
+}
+
+// MARK: - Backup nsec sheet
+
+struct BackupNsecSheetView: View {
+    let nsec: String
+    let onDismiss: () -> Void
+
+    @State private var revealed = false
+    @State private var showCopied = false
+
+    var body: some View {
+        ZStack {
+            Color.sgBg.ignoresSafeArea()
+
+            VStack(spacing: 24) {
+                Spacer().frame(height: 40)
+
+                Image(systemName: "key.fill")
+                    .font(.system(size: 28, weight: .light))
+                    .foregroundColor(.sgDanger)
+
+                Text("PRIVATE KEY")
+                    .font(.outfit(.regular, size: 10))
+                    .tracking(5)
+                    .foregroundColor(.sgDanger)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("WARNING")
+                        .font(.outfit(.regular, size: 9))
+                        .tracking(3)
+                        .foregroundColor(.sgDanger)
+
+                    Text("Anyone who sees this key controls your Nostr identity. Copy it to a secure password manager.")
+                        .font(.outfit(.light, size: 12))
+                        .foregroundColor(.sgTextFaint)
+                        .lineSpacing(4)
+                }
+                .padding(Dimensions.cardPadding)
+                .background(Color.sgDangerBg)
+                .cornerRadius(Dimensions.cardCornerRadius)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Dimensions.cardCornerRadius)
+                        .stroke(Color.sgDangerBorder, lineWidth: 1)
+                )
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("NSEC")
+                        .font(.outfit(.regular, size: 9))
+                        .tracking(3)
+                        .foregroundColor(.sgTextGhost)
+
+                    Text(revealed ? nsec : String(repeating: "\u{2022}", count: 32))
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundColor(.sgTextBody)
+                        .lineLimit(4)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(Dimensions.cardPadding)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.sgBgRaised)
+                .cornerRadius(Dimensions.cardCornerRadius)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Dimensions.cardCornerRadius)
+                        .stroke(Color.sgBorder, lineWidth: 1)
+                )
+                .onTapGesture { revealed.toggle() }
+
+                HStack(spacing: 12) {
+                    Button(action: {
+                        UIPasteboard.general.string = nsec
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        showCopied = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 30) {
+                            if UIPasteboard.general.string == nsec {
+                                UIPasteboard.general.string = ""
+                            }
+                        }
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: showCopied ? "checkmark" : "doc.on.doc")
+                                .font(.system(size: 11))
+                            Text(showCopied ? "COPIED" : "COPY")
+                                .font(.outfit(.regular, size: 10))
+                                .tracking(3)
+                        }
+                        .foregroundColor(.sgTextBright)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .background(Color.sgBorder)
+                        .cornerRadius(Dimensions.buttonCornerRadius)
+                    }
+
+                    Button(action: onDismiss) {
+                        Text("DONE")
+                            .font(.outfit(.regular, size: 10))
+                            .tracking(3)
+                            .foregroundColor(.sgTextMuted)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 44)
+                            .background(Color.sgBgSurface)
+                            .cornerRadius(Dimensions.buttonCornerRadius)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Dimensions.buttonCornerRadius)
+                                    .stroke(Color.sgBorder, lineWidth: 1)
+                            )
+                    }
+                }
+
+                Spacer()
+            }
+            .padding(.horizontal, 24)
+        }
+        .preferredColorScheme(.dark)
     }
 }

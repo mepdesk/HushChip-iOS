@@ -47,6 +47,7 @@ struct HomeView: View {
     private func needsKeySetup() -> Bool {
         return !UserDefaults.standard.bool(forKey: Constants.Keys.keySetupComplete)
             && !KeyManager.keyExists()
+            && !IdentityManager.shared.hasIdentities
     }
 
     var body: some View {

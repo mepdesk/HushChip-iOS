@@ -40,6 +40,15 @@ struct SignstrApp: App {
             }
             .preferredColorScheme(.dark)
             .onAppear {
+                // Migrate existing single key to multi-identity system
+                let im = IdentityManager.shared
+                if !im.hasIdentities && SecureEnclaveKeyStore.hasStoredKey() {
+                    im.migrateExistingKey()
+                    if let firstId = im.identities.first?.id {
+                        im.migrateExistingConnections(identityId: firstId)
+                    }
+                }
+
                 nip46Service.restoreConnections()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
                     withAnimation(.easeOut(duration: 0.5)) {

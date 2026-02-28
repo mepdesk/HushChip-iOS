@@ -90,6 +90,9 @@
 		BB00004200000042000000F2 /* KeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00004300000043000000F3 /* KeyManager.swift */; };
 		BB00004400000044000000F4 /* SoftwareSigner.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00004500000045000000F5 /* SoftwareSigner.swift */; };
 		BB00004600000046000000F6 /* KeyStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00004700000047000000F7 /* KeyStorageTests.swift */; };
+		BB00005000000050000000A0 /* IdentityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00005100000051000000A1 /* IdentityManager.swift */; };
+		BB00005200000052000000A2 /* IdentityPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00005300000053000000A3 /* IdentityPickerView.swift */; };
+		BB00005400000054000000A4 /* AddIdentityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00005500000055000000A5 /* AddIdentityView.swift */; };
 		CC00000400000004000000A4 /* IdentityTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000300000003000000A3 /* IdentityTabView.swift */; };
 		CC00000600000006000000A6 /* SettingsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000500000005000000A5 /* SettingsTabView.swift */; };
 		A1B2C3D400000005000000B5 /* KeySetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D400000001000000B1 /* KeySetupView.swift */; };
@@ -215,6 +218,9 @@
 		BB00004300000043000000F3 /* KeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyManager.swift; sourceTree = "<group>"; };
 		BB00004500000045000000F5 /* SoftwareSigner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoftwareSigner.swift; sourceTree = "<group>"; };
 		BB00004700000047000000F7 /* KeyStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyStorageTests.swift; sourceTree = "<group>"; };
+		BB00005100000051000000A1 /* IdentityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentityManager.swift; sourceTree = "<group>"; };
+		BB00005300000053000000A3 /* IdentityPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentityPickerView.swift; sourceTree = "<group>"; };
+		BB00005500000055000000A5 /* AddIdentityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddIdentityView.swift; sourceTree = "<group>"; };
 		CC00000300000003000000A3 /* IdentityTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentityTabView.swift; sourceTree = "<group>"; };
 		CC00000500000005000000A5 /* SettingsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTabView.swift; sourceTree = "<group>"; };
 		A1B2C3D400000001000000B1 /* KeySetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeySetupView.swift; sourceTree = "<group>"; };
@@ -473,6 +479,7 @@
 				D080FD772C261D1E00B50489 /* OptionSelectorView.swift */,
 				AA10CB030000000300000003 /* ClipboardToast.swift */,
 				AA10CB050000000500000005 /* NumericKeypad.swift */,
+				BB00005300000053000000A3 /* IdentityPickerView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -545,6 +552,7 @@
 				BB00001800000018000000C8 /* NostrRelayPool.swift */,
 				BB00004100000041000000F1 /* SecureEnclaveKeyStore.swift */,
 				BB00004300000043000000F3 /* KeyManager.swift */,
+				BB00005100000051000000A1 /* IdentityManager.swift */,
 				BB00004500000045000000F5 /* SoftwareSigner.swift */,
 			);
 			path = Nostr;
@@ -559,6 +567,7 @@
 				A1B2C3D400000003000000B3 /* ImportNsecView.swift */,
 				A1B2C3D400000004000000B4 /* QRScannerView.swift */,
 				EE00000900000009000000E9 /* BackUpKeyView.swift */,
+				BB00005500000055000000A5 /* AddIdentityView.swift */,
 			);
 			path = Identity;
 			sourceTree = "<group>";
@@ -841,6 +850,9 @@
 				DD00001800000018000000B9 /* NIP46ConnectionStore.swift in Sources */,
 				FF00000200000002000000A2 /* RelayConfigView.swift in Sources */,
 				FF00000400000004000000A4 /* NIP46TestClientView.swift in Sources */,
+				BB00005000000050000000A0 /* IdentityManager.swift in Sources */,
+				BB00005200000052000000A2 /* IdentityPickerView.swift in Sources */,
+				BB00005400000054000000A4 /* AddIdentityView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

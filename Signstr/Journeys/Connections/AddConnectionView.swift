@@ -355,8 +355,22 @@ struct AddConnectionView: View {
 
         Task {
             do {
-                let privateKey = try SecureEnclaveKeyStore.load()
-                _ = try nip46Service.addConnection(from: info, signerPrivateKey: privateKey)
+                let im = IdentityManager.shared
+                let activeIdentity = im.activeIdentity
+
+                // Load private key: prefer IdentityManager, fall back to SecureEnclaveKeyStore
+                let privateKey: Data
+                if let identity = activeIdentity, let nsec = im.loadNsec(for: identity.id) {
+                    privateKey = nsec
+                } else {
+                    privateKey = try SecureEnclaveKeyStore.load()
+                }
+
+                _ = try nip46Service.addConnection(
+                    from: info,
+                    signerPrivateKey: privateKey,
+                    identityId: activeIdentity?.id
+                )
 
                 // Zero the key
                 let mutable = NSMutableData(data: privateKey)

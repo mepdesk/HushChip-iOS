@@ -65,11 +65,20 @@ final class NIP46Service: ObservableObject {
     private var isProcessingRequest = false
 
     /// The signer's hex-encoded public key (for filtering incoming events).
+    /// In multi-identity mode, this is the ACTIVE identity's pubkey (used for AUTH, etc.).
     private var signerPubkeyHex: String?
 
     /// The signer's raw private key data (needed for NIP-44 conversation keys).
     /// In production, this is decrypted via biometrics only when needed.
     private var signerPrivateKey: Data?
+
+    /// Per-identity key material, keyed by signer pubkey hex.
+    /// Each entry stores the private key for that identity so we can handle
+    /// NIP-46 events for ALL identities simultaneously.
+    private var identityKeys: [String: Data] = [:]
+
+    /// All signer pubkey hexes we're listening for (one per identity).
+    private var allSignerPubkeys: Set<String> = []
 
     /// Event kinds considered safe for auto-approval (no user prompt needed):
     /// - 0: profile metadata
@@ -95,7 +104,8 @@ final class NIP46Service: ObservableObject {
     /// Adds a new connection from a parsed URI.
     func addConnection(
         from connectionInfo: NIP46ConnectionInfo,
-        signerPrivateKey: Data
+        signerPrivateKey: Data,
+        identityId: String? = nil
     ) throws -> NIP46Session {
         print("[NIP46] ── Adding connection ──")
         print("[NIP46]   Client pubkey: \(connectionInfo.pubkey)")
@@ -103,6 +113,7 @@ final class NIP46Service: ObservableObject {
         print("[NIP46]   Relays: \(connectionInfo.relays)")
         print("[NIP46]   Flow: \(connectionInfo.flow)")
         print("[NIP46]   Secret present: \(connectionInfo.secret != nil)")
+        print("[NIP46]   Identity ID: \(identityId ?? "nil")")
 
         let session = try NIP46Session(
             connectionInfo: connectionInfo,
@@ -110,12 +121,18 @@ final class NIP46Service: ObservableObject {
         )
         self.signerPrivateKey = signerPrivateKey
 
-        // Derive signer pubkey if not yet known
+        // Derive signer pubkey
+        let pubkeyData = try SchnorrSigner.derivePublicKey(from: signerPrivateKey)
+        let thisPubkeyHex = NostrKeyUtils.hexEncode(pubkeyData)
         if signerPubkeyHex == nil {
-            let pubkeyData = try SchnorrSigner.derivePublicKey(from: signerPrivateKey)
-            signerPubkeyHex = NostrKeyUtils.hexEncode(pubkeyData)
+            signerPubkeyHex = thisPubkeyHex
         }
-        print("[NIP46]   Signer pubkey: \(signerPubkeyHex ?? "nil")")
+
+        // Register this identity's key material
+        identityKeys[thisPubkeyHex] = signerPrivateKey
+        allSignerPubkeys.insert(thisPubkeyHex)
+
+        print("[NIP46]   Signer pubkey: \(thisPubkeyHex)")
         print("[NIP46]   Safe auto-approve kinds: \(Self.safeAutoApproveKinds.sorted())")
         print("[NIP46]   Signer privkey (first 4 bytes): \(signerPrivateKey.prefix(4).map { String(format: "%02x", $0) }.joined())")
         // Log conversation key fingerprint for later comparison with decrypt side
@@ -141,10 +158,11 @@ final class NIP46Service: ObservableObject {
             clientPubkey: session.clientPubkey,
             clientName: session.appName,
             relayURLs: session.relays,
-            signerPubkey: signerPubkeyHex ?? "",
+            signerPubkey: thisPubkeyHex,
             encryption: session.encryptionPreference.rawValue,
             flow: connectionInfo.flow == .clientInitiated ? "clientInitiated" : "signerInitiated",
-            permissions: connectionInfo.permissions
+            permissions: connectionInfo.permissions,
+            identityId: identityId
         )
         NIP46ConnectionStore.save(saved, signerPrivateKey: signerPrivateKey)
 
@@ -219,10 +237,28 @@ final class NIP46Service: ObservableObject {
 
     /// Restores previously saved connections from UserDefaults + Keychain.
     /// Called on app launch to re-establish NIP-46 sessions without user interaction.
+    /// Restores connections for ALL identities, not just the active one.
     func restoreConnections() {
+        // First, load all identity keys from IdentityManager
+        let identityManager = IdentityManager.shared
+        for identity in identityManager.identities {
+            if let nsec = identityManager.loadNsec(for: identity.id) {
+                identityKeys[identity.pubkeyHex] = nsec
+                allSignerPubkeys.insert(identity.pubkeyHex)
+                print("[NIP46] Loaded key for identity '\(identity.displayName)' (\(identity.pubkeyHex.prefix(8))...)")
+            }
+        }
+
+        // Set the active identity's key as the primary (for backward compat)
+        if let active = identityManager.activeIdentity {
+            signerPubkeyHex = active.pubkeyHex
+            signerPrivateKey = identityKeys[active.pubkeyHex]
+        }
+
         let saved = NIP46ConnectionStore.loadAll()
         guard !saved.isEmpty else {
             print("[NIP46] No saved connections to restore")
+            // Still subscribe to relays for identity pubkeys if we have keys loaded
             return
         }
 
@@ -237,12 +273,20 @@ final class NIP46Service: ObservableObject {
             }
 
             do {
-                // Derive signer pubkey if not yet known
+                // Derive signer pubkey for this connection
+                let pubkeyData = try SchnorrSigner.derivePublicKey(from: signerPrivKey)
+                let connectionPubkeyHex = NostrKeyUtils.hexEncode(pubkeyData)
+
+                // Register this identity's keys
+                identityKeys[connectionPubkeyHex] = signerPrivKey
+                allSignerPubkeys.insert(connectionPubkeyHex)
+
                 if signerPubkeyHex == nil {
-                    let pubkeyData = try SchnorrSigner.derivePublicKey(from: signerPrivKey)
-                    signerPubkeyHex = NostrKeyUtils.hexEncode(pubkeyData)
+                    signerPubkeyHex = connectionPubkeyHex
                 }
-                self.signerPrivateKey = signerPrivKey
+                if signerPrivateKey == nil {
+                    self.signerPrivateKey = signerPrivKey
+                }
 
                 // Rederive NIP-44 conversation key from signer privkey + client pubkey
                 let clientPubkeyData = try NostrKeyUtils.hexDecode(connection.clientPubkey)
@@ -277,7 +321,7 @@ final class NIP46Service: ObservableObject {
             }
         }
 
-        print("[NIP46] Restore complete: \(sessions.count) active sessions")
+        print("[NIP46] Restore complete: \(sessions.count) active sessions, \(allSignerPubkeys.count) identity pubkeys")
     }
 
     /// Removes a session and disconnects its relays if no other session uses them.
@@ -299,6 +343,32 @@ final class NIP46Service: ObservableObject {
     /// Returns all sessions as an array (for UI display).
     var activeSessions: [NIP46Session] {
         Array(sessions.values).sorted { $0.connectedAt < $1.connectedAt }
+    }
+
+    /// Returns sessions for a specific identity (by signer pubkey hex).
+    func sessions(forSignerPubkey pubkeyHex: String) -> [NIP46Session] {
+        let savedConnections = NIP46ConnectionStore.loadAll()
+        let clientPubkeys = Set(savedConnections.filter { $0.signerPubkey == pubkeyHex }.map { $0.clientPubkey })
+        return activeSessions.filter { clientPubkeys.contains($0.clientPubkey) }
+    }
+
+    /// Returns sessions for a specific identity UUID.
+    func sessions(forIdentity identityId: String) -> [NIP46Session] {
+        let savedConnections = NIP46ConnectionStore.loadAll(forIdentity: identityId)
+        let clientPubkeys = Set(savedConnections.map { $0.clientPubkey })
+        return activeSessions.filter { clientPubkeys.contains($0.clientPubkey) }
+    }
+
+    /// Registers an identity's key material so the service can handle its events.
+    func registerIdentityKey(pubkeyHex: String, privateKey: Data) {
+        identityKeys[pubkeyHex] = privateKey
+        allSignerPubkeys.insert(pubkeyHex)
+        print("[NIP46] Registered identity key for \(pubkeyHex.prefix(8))...")
+
+        // Re-subscribe on all existing relays with the updated pubkey list
+        for (relayURL, task) in relayConnections {
+            sendSubscription(to: task, relayURL: relayURL)
+        }
     }
 
     // MARK: - Relay subscription
@@ -331,18 +401,25 @@ final class NIP46Service: ObservableObject {
     }
 
     private func sendSubscription(to task: URLSessionWebSocketTask, relayURL: String) {
-        guard let signerPubkey = signerPubkeyHex else {
-            print("[NIP46] ⚠ Cannot subscribe — signer pubkey not set")
-            return
+        // Collect all pubkeys we need to subscribe for
+        let pubkeys: [String]
+        if allSignerPubkeys.isEmpty {
+            guard let signerPubkey = signerPubkeyHex else {
+                print("[NIP46] ⚠ Cannot subscribe — no signer pubkeys set")
+                return
+            }
+            pubkeys = [signerPubkey]
+        } else {
+            pubkeys = Array(allSignerPubkeys)
         }
 
-        // REQ: subscribe to kind 24133 events tagged to our pubkey
-        print("[NIP46]   Subscribing with signer pubkey: \(signerPubkey)")
-        let subId = "signstr-\(signerPubkey.prefix(8))"
+        // REQ: subscribe to kind 24133 events tagged to any of our pubkeys
+        print("[NIP46]   Subscribing with \(pubkeys.count) signer pubkey(s): \(pubkeys.map { String($0.prefix(8)) })")
+        let subId = "signstr-\(pubkeys.first?.prefix(8) ?? "unknown")"
         let sinceTimestamp = Int(Date().timeIntervalSince1970) - 60
         let filter: [String: Any] = [
             "kinds": [24133],
-            "#p": [signerPubkey],
+            "#p": pubkeys,
             "since": sinceTimestamp
         ]
         print("[NIP46]   Filter since: \(sinceTimestamp) (now - 60s)")
@@ -516,14 +593,24 @@ final class NIP46Service: ObservableObject {
         // Extract p-tag recipients and event ID for debugging
         let eventId = eventDict["id"] as? String ?? "?"
         let tags = eventDict["tags"] as? [[String]] ?? []
-        let pTags = tags.filter { $0.first == "p" }.map { $0.dropFirst().joined(separator: ",") }
+        let pTags = tags.filter { $0.first == "p" && $0.count > 1 }.map { $0[1] }
 
         print("[NIP46] ← EVENT kind 24133 from \(relayURL)")
         print("[NIP46]   Event ID: \(eventId.prefix(16))...")
         print("[NIP46]   Sender pubkey: \(senderPubkey)")
-        print("[NIP46]   p-tags: \(pTags)")
-        print("[NIP46]   Our signer pubkey: \(signerPubkeyHex ?? "nil")")
+        print("[NIP46]   p-tags: \(pTags.map { String($0.prefix(8)) })")
+        print("[NIP46]   Our signer pubkeys: \(allSignerPubkeys.map { String($0.prefix(8)) })")
         print("[NIP46]   Content length: \(encryptedContent.count) chars")
+
+        // Determine which identity this event targets by checking p-tags
+        let targetPubkey = pTags.first { allSignerPubkeys.contains($0) } ?? signerPubkeyHex
+        if let tp = targetPubkey {
+            // Set the correct private key context for processing this event
+            if let identityPrivKey = identityKeys[tp] {
+                signerPrivateKey = identityPrivKey
+                signerPubkeyHex = tp
+            }
+        }
 
         // Dedup: skip events we've already processed (same event arrives on multiple relays)
         cleanupProcessedEventIDs()
@@ -1218,5 +1305,7 @@ final class NIP46Service: ObservableObject {
         relayReconnectAttempts.removeAll()
         sessions.removeAll()
         signerPrivateKey = nil
+        identityKeys.removeAll()
+        allSignerPubkeys.removeAll()
     }
 }

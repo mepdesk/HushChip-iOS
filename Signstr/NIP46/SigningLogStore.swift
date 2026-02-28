@@ -24,6 +24,8 @@ struct SigningLogEntry: Identifiable, Codable {
     /// True when auto-approved specifically because the event kind is in the safe set (0, 3, 10002).
     let safeKindAutoApproved: Bool
     let eventJSON: String
+    /// Identity UUID that owns this signing event (nil for legacy entries).
+    let identityId: String?
 
     init(
         id: UUID = UUID(),
@@ -35,7 +37,8 @@ struct SigningLogEntry: Identifiable, Codable {
         approved: Bool,
         autoApproved: Bool = false,
         safeKindAutoApproved: Bool = false,
-        eventJSON: String = ""
+        eventJSON: String = "",
+        identityId: String? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -47,6 +50,7 @@ struct SigningLogEntry: Identifiable, Codable {
         self.autoApproved = autoApproved
         self.safeKindAutoApproved = safeKindAutoApproved
         self.eventJSON = eventJSON
+        self.identityId = identityId
     }
 
     // Backwards-compatible decoding: older entries may lack newer fields.
@@ -62,6 +66,7 @@ struct SigningLogEntry: Identifiable, Codable {
         autoApproved = try container.decodeIfPresent(Bool.self, forKey: .autoApproved) ?? false
         safeKindAutoApproved = try container.decodeIfPresent(Bool.self, forKey: .safeKindAutoApproved) ?? false
         eventJSON = try container.decode(String.self, forKey: .eventJSON)
+        identityId = try container.decodeIfPresent(String.self, forKey: .identityId)
     }
 
     var kindDescription: String {
@@ -95,9 +100,20 @@ final class SigningLogStore: ObservableObject {
         entries = Self.loadEntries()
     }
 
-    /// Adds a new log entry and persists.
+    /// Adds a new log entry and persists. Caps at 200 entries per identity.
     func addEntry(_ entry: SigningLogEntry) {
         entries.insert(entry, at: 0) // newest first
+
+        // Cap at 200 entries per identity
+        if let identityId = entry.identityId {
+            var count = 0
+            entries.removeAll { e in
+                guard e.identityId == identityId else { return false }
+                count += 1
+                return count > 200
+            }
+        }
+
         save()
     }
 
@@ -110,7 +126,8 @@ final class SigningLogStore: ObservableObject {
         approved: Bool,
         autoApproved: Bool = false,
         safeKindAutoApproved: Bool = false,
-        eventJSON: String = ""
+        eventJSON: String = "",
+        identityId: String? = nil
     ) {
         let entry = SigningLogEntry(
             appName: appName,
@@ -120,9 +137,15 @@ final class SigningLogStore: ObservableObject {
             approved: approved,
             autoApproved: autoApproved,
             safeKindAutoApproved: safeKindAutoApproved,
-            eventJSON: eventJSON
+            eventJSON: eventJSON,
+            identityId: identityId
         )
         addEntry(entry)
+    }
+
+    /// Returns entries for a specific identity, newest first.
+    func entries(forIdentity identityId: String) -> [SigningLogEntry] {
+        entries.filter { $0.identityId == identityId }
     }
 
     /// Clears all log entries.

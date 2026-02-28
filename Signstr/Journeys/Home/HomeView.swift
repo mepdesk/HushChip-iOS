@@ -26,6 +26,7 @@ enum NavigationRoutes: Hashable {
 
 enum AppTab: Int, Hashable {
     case connections
+    case events
     case identity
     case settings
 }
@@ -56,7 +57,14 @@ struct HomeView: View {
                 .tag(AppTab.connections)
                 .tabItem {
                     Image(systemName: "link")
-                    Text("Connections")
+                    Text("Connect")
+                }
+
+            EventsTabView()
+                .tag(AppTab.events)
+                .tabItem {
+                    Image(systemName: "list.clipboard")
+                    Text("Events")
                 }
 
             IdentityTabView()

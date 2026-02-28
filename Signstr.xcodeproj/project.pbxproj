@@ -12,6 +12,7 @@
 		EE00000400000004000000E4 /* SigningLogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000300000003000000E3 /* SigningLogStore.swift */; };
 		EE00000600000006000000E6 /* AppSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000500000005000000E5 /* AppSettingsView.swift */; };
 		EE00000800000008000000E8 /* EventLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000700000007000000E7 /* EventLogView.swift */; };
+		EE00002000000020000000F8 /* EventsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00002100000021000000F9 /* EventsTabView.swift */; };
 		EE00001000000010000000F0 /* BackUpKeyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000900000009000000E9 /* BackUpKeyView.swift */; };
 		EE00001200000012000000F2 /* EmergencyExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00001100000011000000F1 /* EmergencyExportView.swift */; };
 		AA00000200000002000000A2 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000100000001000000A1 /* AboutView.swift */; };
@@ -138,6 +139,7 @@
 		EE00000300000003000000E3 /* SigningLogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SigningLogStore.swift; sourceTree = "<group>"; };
 		EE00000500000005000000E5 /* AppSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettingsView.swift; sourceTree = "<group>"; };
 		EE00000700000007000000E7 /* EventLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventLogView.swift; sourceTree = "<group>"; };
+		EE00002100000021000000F9 /* EventsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventsTabView.swift; sourceTree = "<group>"; };
 		EE00000900000009000000E9 /* BackUpKeyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackUpKeyView.swift; sourceTree = "<group>"; };
 		EE00001100000011000000F1 /* EmergencyExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmergencyExportView.swift; sourceTree = "<group>"; };
 		83CB38F9386046D5AC64D266 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
@@ -600,6 +602,7 @@
 				A09BFBE517A0FFAC2B24FC82 /* SigningRequestView.swift */,
 				EE00000500000005000000E5 /* AppSettingsView.swift */,
 				EE00000700000007000000E7 /* EventLogView.swift */,
+				EE00002100000021000000F9 /* EventsTabView.swift */,
 			);
 			path = Connections;
 			sourceTree = "<group>";
@@ -848,6 +851,7 @@
 				EE00000400000004000000E4 /* SigningLogStore.swift in Sources */,
 				EE00000600000006000000E6 /* AppSettingsView.swift in Sources */,
 				EE00000800000008000000E8 /* EventLogView.swift in Sources */,
+				EE00002000000020000000F8 /* EventsTabView.swift in Sources */,
 				EE00001000000010000000F0 /* BackUpKeyView.swift in Sources */,
 				EE00001200000012000000F2 /* EmergencyExportView.swift in Sources */,
 				DD00001800000018000000B8 /* NIP46RelayStore.swift in Sources */,

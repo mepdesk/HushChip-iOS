@@ -841,6 +841,7 @@ final class NIP46Service: ObservableObject {
                     let signEnd = CFAbsoluteTimeGetCurrent()
 
                     // Log the signing request
+                    let logIdentityId = signerPubkeyHex.flatMap { IdentityManager.shared.identity(forPubkey: $0)?.id }
                     SigningLogStore.shared.log(
                         appName: session.displayName,
                         clientPubkey: session.clientPubkey,
@@ -849,7 +850,8 @@ final class NIP46Service: ObservableObject {
                         approved: true,
                         autoApproved: true,
                         safeKindAutoApproved: safeKindAutoApprove,
-                        eventJSON: request.params.first ?? ""
+                        eventJSON: request.params.first ?? "",
+                        identityId: logIdentityId
                     )
                     ApprovalPolicyStore.recordFirstApproval(for: session.clientPubkey)
 
@@ -902,6 +904,7 @@ final class NIP46Service: ObservableObject {
                 }
 
                 // Log the signing request
+                let manualLogIdentityId = signerPubkeyHex.flatMap { IdentityManager.shared.identity(forPubkey: $0)?.id }
                 SigningLogStore.shared.log(
                     appName: session.displayName,
                     clientPubkey: session.clientPubkey,
@@ -910,7 +913,8 @@ final class NIP46Service: ObservableObject {
                     approved: approved,
                     autoApproved: autoApprove && approved,
                     safeKindAutoApproved: safeKindAutoApprove && approved,
-                    eventJSON: request.params.first ?? ""
+                    eventJSON: request.params.first ?? "",
+                    identityId: manualLogIdentityId
                 )
 
                 if approved {

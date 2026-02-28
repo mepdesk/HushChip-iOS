@@ -12,6 +12,7 @@
 
 import CryptoKit
 import Foundation
+import LocalAuthentication
 import UIKit
 import UserNotifications
 
@@ -792,10 +793,10 @@ final class NIP46Service: ObservableObject {
 
             // 2. For sign_event, check approval policy before prompting
             var autoApprove = false
+            var eventKind = 0
+            var eventContent = ""
             if request.method == "sign_event" {
                 // Parse event details for logging
-                var eventKind = 0
-                var eventContent = ""
                 if let eventJSON = request.params.first,
                    let data = eventJSON.data(using: .utf8),
                    let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -935,14 +936,42 @@ final class NIP46Service: ObservableObject {
                 // Return pubkey directly — no biometric auth needed for public data
                 print("[NIP46] Handling get_public_key directly (no biometrics)")
                 response = .success(id: request.id, result: pubkey)
-            } else if request.method == "sign_event" {
-                // User-approved sign_event — require Face ID via SoftwareSigner
-                print("[NIP46] Signing user-approved event via SoftwareSigner (Face ID required)")
-                response = await NIP46MessageHandler.handleRequest(
-                    request,
-                    signer: signer,
-                    session: session
-                )
+            } else if request.method == "sign_event", let pubkey = signerPubkeyHex, let privKey = signerPrivateKey {
+                // User-approved sign_event — require Face ID, then sign with identity key
+                print("[NIP46] Face ID required for kind \(eventKind) — authenticating...")
+
+                let context = LAContext()
+                var authError: NSError?
+                let canUseBiometrics = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &authError)
+
+                var faceIdPassed = false
+                if canUseBiometrics {
+                    do {
+                        faceIdPassed = try await context.evaluatePolicy(
+                            .deviceOwnerAuthenticationWithBiometrics,
+                            localizedReason: "Sign a Nostr event"
+                        )
+                    } catch {
+                        print("[NIP46] Face ID failed: \(error)")
+                    }
+                } else {
+                    // No biometrics available (e.g. simulator) — allow signing
+                    print("[NIP46] Biometrics unavailable — skipping Face ID")
+                    faceIdPassed = true
+                }
+
+                if faceIdPassed {
+                    let identityName = IdentityManager.shared.identity(forPubkey: pubkey)?.displayName ?? pubkey.prefix(8).description
+                    print("[NIP46] Face ID passed — signing with identity \(identityName)")
+                    response = NIP46MessageHandler.handleSignEventDirect(
+                        request,
+                        signerPubkeyHex: pubkey,
+                        signerPrivateKey: privKey
+                    )
+                } else {
+                    print("[NIP46] Face ID rejected — returning error to client")
+                    response = .error(id: request.id, message: "Biometric authentication failed")
+                }
             } else {
                 print("[NIP46] Dispatching \(request.method) to handler...")
                 response = await NIP46MessageHandler.handleRequest(

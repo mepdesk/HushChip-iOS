@@ -169,8 +169,7 @@ struct EventLogView: View {
 
     private func badgeColor(for entry: SigningLogEntry) -> Color {
         if !entry.approved { return .sgDanger.opacity(0.6) }
-        if entry.safeKindAutoApproved { return Color(hex: "#5a6a7a") } // muted blue-grey for safe kind
-        if entry.autoApproved { return Color(hex: "#3d5a8a") } // blue-tint for policy auto
+        if entry.autoApproved { return Color(hex: "#3d5a8a") } // blue-tint for auto
         return Color(hex: "#2d5a3d") // green for manual approve
     }
 

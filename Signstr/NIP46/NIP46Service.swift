@@ -29,11 +29,6 @@ final class NIP46Service: ObservableObject {
     /// The current pending signing request awaiting user approval (nil = no pending request).
     @Published var pendingRequest: PendingSigningRequest?
 
-    /// Event kinds that are auto-approved without user interaction (unless
-    /// the global "require approval for all events" setting is enabled).
-    /// Kind 0: profile metadata, kind 3: contact list, kind 10002: relay list.
-    static let safeAutoApproveKinds: Set<Int> = [0, 3, 10002]
-
     /// The signer used to handle signing requests.
     private let signer: NostrSigner
 
@@ -50,13 +45,6 @@ final class NIP46Service: ObservableObject {
 
     /// Whether a request is currently being processed (waiting for user approval).
     private var isProcessingRequest = false
-
-    /// Tracks processed kind 24133 event IDs to prevent duplicate processing.
-    /// Cleared every 5 minutes to prevent unbounded memory growth.
-    private var processedEventIDs: Set<String> = []
-
-    /// Timestamp of the last deduplication set cleanup.
-    private var lastDeduplicationCleanup = Date()
 
     /// The signer's hex-encoded public key (for filtering incoming events).
     private var signerPubkeyHex: String?
@@ -363,14 +351,6 @@ final class NIP46Service: ObservableObject {
         print("[NIP46]   Our signer pubkey: \(signerPubkeyHex ?? "nil")")
         print("[NIP46]   Content length: \(encryptedContent.count) chars")
 
-        // Deduplication: skip events we've already processed
-        cleanupProcessedEventIDs()
-        guard eventId != "?", !processedEventIDs.contains(eventId) else {
-            print("[NIP46]   Duplicate event \(eventId.prefix(16))... — skipping")
-            return
-        }
-        processedEventIDs.insert(eventId)
-
         // Find the session for this client
         guard let session = sessions[senderPubkey] else {
             print("[NIP46] ⚠ No session found for sender \(senderPubkey.prefix(16))...")
@@ -537,22 +517,11 @@ final class NIP46Service: ObservableObject {
                     eventContent = dict["content"] as? String ?? ""
                 }
 
-                // Check safe-kind auto-approval: kinds 0, 3, 10002 are auto-approved
-                // unless the user has enabled "require approval for all events".
-                let requireApprovalForAll = UserDefaults.standard.bool(
-                    forKey: "signstr.require_approval_for_all"
-                )
-                let isSafeKind = Self.safeAutoApproveKinds.contains(eventKind) && !requireApprovalForAll
-
-                let autoApprovePolicy = ApprovalPolicyStore.shouldAutoApprove(for: session.clientPubkey)
-                let autoApprove = autoApprovePolicy || isSafeKind
+                let autoApprove = ApprovalPolicyStore.shouldAutoApprove(for: session.clientPubkey)
 
                 let approved: Bool
                 if autoApprove {
                     approved = true
-                    if isSafeKind {
-                        print("[NIP46]   Safe kind \(eventKind) — auto-approved without prompt")
-                    }
                 } else {
                     approved = await requestUserApproval(
                         for: request,
@@ -568,7 +537,6 @@ final class NIP46Service: ObservableObject {
                     content: eventContent,
                     approved: approved,
                     autoApproved: autoApprove && approved,
-                    safeKindAutoApproved: isSafeKind && approved,
                     eventJSON: request.params.first ?? ""
                 )
 
@@ -908,18 +876,6 @@ final class NIP46Service: ObservableObject {
                 print("[NIP46] ⚠ WARNING: No OK received from \(pending.relayURL) within 5s for event \(eventId.prefix(16))... — event may have been dropped")
                 self.pendingOKs.removeValue(forKey: eventId)
             }
-        }
-    }
-
-    // MARK: - Deduplication cleanup
-
-    /// Clears the processed event ID set if 5 minutes have elapsed since the last cleanup.
-    private func cleanupProcessedEventIDs() {
-        let now = Date()
-        if now.timeIntervalSince(lastDeduplicationCleanup) >= 300 { // 5 minutes
-            processedEventIDs.removeAll()
-            lastDeduplicationCleanup = now
-            print("[NIP46] Cleared deduplication set (5-min TTL)")
         }
     }
 

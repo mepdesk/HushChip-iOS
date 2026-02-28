@@ -40,7 +40,7 @@ struct SignstrApp: App {
             }
             .preferredColorScheme(.dark)
             .onAppear {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
                     withAnimation(.easeOut(duration: 0.5)) {
                         showSplash = false
                     }

@@ -115,6 +115,18 @@ final class NIP46Service: ObservableObject {
 
         sessions[session.clientPubkey] = session
 
+        // Persist connection for restore on next launch
+        let saved = SavedNIP46Connection(
+            clientPubkey: session.clientPubkey,
+            clientName: session.appName,
+            relayURLs: session.relays,
+            signerPubkey: signerPubkeyHex ?? "",
+            encryption: session.encryptionPreference.rawValue,
+            flow: connectionInfo.flow == .clientInitiated ? "clientInitiated" : "signerInitiated",
+            permissions: connectionInfo.permissions
+        )
+        NIP46ConnectionStore.save(saved, signerPrivateKey: signerPrivateKey)
+
         // Connect to session relays and start listening
         for relayURL in session.relays {
             print("[NIP46]   Subscribing to relay: \(relayURL)")
@@ -184,9 +196,75 @@ final class NIP46Service: ObservableObject {
         return session
     }
 
+    /// Restores previously saved connections from UserDefaults + Keychain.
+    /// Called on app launch to re-establish NIP-46 sessions without user interaction.
+    func restoreConnections() {
+        let saved = NIP46ConnectionStore.loadAll()
+        guard !saved.isEmpty else {
+            print("[NIP46] No saved connections to restore")
+            return
+        }
+
+        print("[NIP46] Restoring \(saved.count) saved connections...")
+
+        for connection in saved {
+            // Load signer private key from Keychain
+            guard let signerPrivKey = NIP46ConnectionStore.loadSignerPrivateKey(for: connection.clientPubkey) else {
+                print("[NIP46] ⚠ Skipping \(connection.clientName ?? connection.clientPubkey.prefix(8).description): no private key in Keychain")
+                NIP46ConnectionStore.delete(clientPubkey: connection.clientPubkey)
+                continue
+            }
+
+            do {
+                // Derive signer pubkey if not yet known
+                if signerPubkeyHex == nil {
+                    let pubkeyData = try SchnorrSigner.derivePublicKey(from: signerPrivKey)
+                    signerPubkeyHex = NostrKeyUtils.hexEncode(pubkeyData)
+                }
+                self.signerPrivateKey = signerPrivKey
+
+                // Rederive NIP-44 conversation key from signer privkey + client pubkey
+                let clientPubkeyData = try NostrKeyUtils.hexDecode(connection.clientPubkey)
+                let conversationKey = try NIP44.conversationKey(
+                    privateKey: signerPrivKey,
+                    publicKey: clientPubkeyData
+                )
+
+                // Restore encryption preference
+                let encryption: NIP46Encryption = connection.encryption == "nip04" ? .nip04 : .nip44
+
+                // Recreate session
+                let session = NIP46Session(
+                    appName: connection.clientName,
+                    clientPubkey: connection.clientPubkey,
+                    relays: connection.relayURLs,
+                    conversationKey: conversationKey,
+                    permissions: connection.permissions
+                )
+                session.encryptionPreference = encryption
+
+                sessions[session.clientPubkey] = session
+
+                // Subscribe to all relays for this session
+                for relayURL in session.relays {
+                    subscribeToRelay(relayURL)
+                }
+
+                print("[NIP46] Restored connection: \(session.displayName) on \(connection.relayURLs)")
+            } catch {
+                print("[NIP46] ⚠ Failed to restore connection \(connection.clientName ?? connection.clientPubkey.prefix(8).description): \(error)")
+            }
+        }
+
+        print("[NIP46] Restore complete: \(sessions.count) active sessions")
+    }
+
     /// Removes a session and disconnects its relays if no other session uses them.
     func removeSession(clientPubkey: String) {
         guard let session = sessions.removeValue(forKey: clientPubkey) else { return }
+
+        // Remove persisted connection data
+        NIP46ConnectionStore.delete(clientPubkey: clientPubkey)
 
         // Check if any remaining session uses these relays
         let allActiveRelays = Set(sessions.values.flatMap { $0.relays })

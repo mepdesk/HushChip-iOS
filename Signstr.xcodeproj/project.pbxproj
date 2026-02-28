@@ -107,6 +107,7 @@
 		381409E49B4616CC25797878 /* SigningRequestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A09BFBE517A0FFAC2B24FC82 /* SigningRequestView.swift */; };
 		DD00001700000017000000B7 /* NIP46Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000700000007000000A7 /* NIP46Tests.swift */; };
 		DD00001800000018000000B8 /* NIP46RelayStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000800000008000000A8 /* NIP46RelayStore.swift */; };
+		DD00001800000018000000B9 /* NIP46ConnectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000800000008000000B9 /* NIP46ConnectionStore.swift */; };
 		FF00000200000002000000A2 /* RelayConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000100000001000000A1 /* RelayConfigView.swift */; };
 		FF00000400000004000000A4 /* NIP46TestClientView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000300000003000000A3 /* NIP46TestClientView.swift */; };
 /* End PBXBuildFile section */
@@ -231,6 +232,7 @@
 		A09BFBE517A0FFAC2B24FC82 /* SigningRequestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SigningRequestView.swift; sourceTree = "<group>"; };
 		DD00000700000007000000A7 /* NIP46Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP46Tests.swift; sourceTree = "<group>"; };
 		DD00000800000008000000A8 /* NIP46RelayStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP46RelayStore.swift; sourceTree = "<group>"; };
+		DD00000800000008000000B9 /* NIP46ConnectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP46ConnectionStore.swift; sourceTree = "<group>"; };
 		FF00000100000001000000A1 /* RelayConfigView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayConfigView.swift; sourceTree = "<group>"; };
 		FF00000300000003000000A3 /* NIP46TestClientView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NIP46TestClientView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -573,6 +575,7 @@
 				EE00000100000001000000E1 /* ApprovalPolicy.swift */,
 				EE00000300000003000000E3 /* SigningLogStore.swift */,
 				DD00000800000008000000A8 /* NIP46RelayStore.swift */,
+				DD00000800000008000000B9 /* NIP46ConnectionStore.swift */,
 			);
 			path = NIP46;
 			sourceTree = "<group>";
@@ -835,6 +838,7 @@
 				EE00001000000010000000F0 /* BackUpKeyView.swift in Sources */,
 				EE00001200000012000000F2 /* EmergencyExportView.swift in Sources */,
 				DD00001800000018000000B8 /* NIP46RelayStore.swift in Sources */,
+				DD00001800000018000000B9 /* NIP46ConnectionStore.swift in Sources */,
 				FF00000200000002000000A2 /* RelayConfigView.swift in Sources */,
 				FF00000400000004000000A4 /* NIP46TestClientView.swift in Sources */,
 			);

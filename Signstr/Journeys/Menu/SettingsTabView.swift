@@ -16,11 +16,11 @@ struct SettingsTabView: View {
     @State private var notificationsEnabled: Bool = true
     @State private var showDeleteAllConfirm = false
     @State private var showDeleteAllFinal = false
+    @State private var showResetAppConfirm = false
+    @State private var showResetAppFinal = false
+    @State private var showResetOnboardingConfirm = false
     @State private var showPolicyPicker = false
     @State private var showExportAllKeys = false
-    @State private var debugUnlocked = false
-    @State private var versionTapCount = 0
-    @State private var showDebugBadge = false
 
     private var biometricTypeName: String {
         let context = LAContext()
@@ -103,6 +103,10 @@ struct SettingsTabView: View {
                         settingsRow(icon: "doc.text", title: "Developer Options", subtitle: "View application logs") {
                             cardState.homeNavigationPath.append(NavigationRoutes.logs)
                         }
+                        Spacer().frame(height: 8)
+                        settingsRow(icon: "arrow.counterclockwise", title: "Reset Onboarding", subtitle: "Show onboarding flow on next launch") {
+                            showResetOnboardingConfirm = true
+                        }
                         #endif
 
                         Spacer().frame(height: 32)
@@ -118,6 +122,11 @@ struct SettingsTabView: View {
 
                         dangerRow(icon: "trash", title: "Delete All Data", subtitle: "Wipe all identities and connections") {
                             showDeleteAllConfirm = true
+                        }
+                        Spacer().frame(height: 8)
+
+                        dangerRow(icon: "arrow.triangle.2.circlepath", title: "Reset App", subtitle: "Wipe everything and return to onboarding") {
+                            showResetAppConfirm = true
                         }
 
                         Spacer().frame(height: 60)
@@ -178,6 +187,30 @@ struct SettingsTabView: View {
             }
         } message: {
             Text("This is your last chance. All identities, keys, and sessions will be wiped permanently.")
+        }
+        .alert("Reset App?", isPresented: $showResetAppConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Reset Everything", role: .destructive) {
+                showResetAppFinal = true
+            }
+        } message: {
+            Text("This will delete ALL identities, keys, connections, and event history, then return to the onboarding screen. This cannot be undone.\n\nMake sure you have backups of all your nsecs before proceeding.")
+        }
+        .alert("Are you absolutely sure?", isPresented: $showResetAppFinal) {
+            Button("Cancel", role: .cancel) {}
+            Button("Reset Forever", role: .destructive) {
+                resetAppAndOnboarding()
+            }
+        } message: {
+            Text("This is your last chance. Everything will be wiped and the app will return to the onboarding screen.")
+        }
+        .alert("Reset Onboarding?", isPresented: $showResetOnboardingConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Reset", role: .destructive) {
+                UserDefaults.standard.set(false, forKey: Constants.Keys.onboardingComplete)
+            }
+        } message: {
+            Text("The onboarding flow will show again on the next app launch. Your identities, keys, and connections will not be affected.")
         }
         .sheet(isPresented: $showExportAllKeys) {
             ExportAllKeysSheet()
@@ -433,6 +466,37 @@ struct SettingsTabView: View {
         UserDefaults.standard.set(false, forKey: Constants.Keys.keySetupComplete)
 
         // Navigate back to key setup by clearing nav path
+        cardState.homeNavigationPath = NavigationPath()
+    }
+
+    // MARK: - Reset app (full wipe + onboarding)
+
+    private func resetAppAndOnboarding() {
+        // Disconnect all NIP-46 sessions
+        nip46Service.disconnectAll()
+
+        // Delete all connections
+        NIP46ConnectionStore.deleteAll()
+
+        // Delete all identities and their Keychain entries
+        IdentityManager.shared.deleteAllData()
+
+        // Wipe legacy key from Keychain/Secure Enclave
+        try? KeyManager.deleteKey()
+
+        // Clear event history
+        SigningLogStore.shared.clearAll()
+
+        // Clear stored policies
+        UserDefaults.standard.removeObject(forKey: "signstr.approval_policies")
+        UserDefaults.standard.removeObject(forKey: "signstr.first_approval_times")
+        UserDefaults.standard.removeObject(forKey: "notificationsEnabled")
+
+        // Reset both onboarding and key setup flags
+        UserDefaults.standard.set(false, forKey: Constants.Keys.onboardingComplete)
+        UserDefaults.standard.set(false, forKey: Constants.Keys.keySetupComplete)
+
+        // Navigate back to trigger onboarding
         cardState.homeNavigationPath = NavigationPath()
     }
 

@@ -54,6 +54,9 @@ final class NIP46Session: Identifiable, Hashable, Sendable {
     /// Permissions granted to this client (nil = ask for everything).
     let permissions: String?
 
+    /// Shared secret from the connection URI, used to validate the client's connect request.
+    let secret: String?
+
     /// Detected encryption preference for this client.
     /// Defaults to `.nip44` (per current NIP-46 spec). Updated when the first incoming
     /// request is successfully decrypted, so subsequent responses match the client's format.
@@ -67,7 +70,8 @@ final class NIP46Session: Identifiable, Hashable, Sendable {
         relays: [String],
         conversationKey: SymmetricKey,
         connectedAt: Date = Date(),
-        permissions: String? = nil
+        permissions: String? = nil,
+        secret: String? = nil
     ) {
         self.id = id
         self.appName = appName
@@ -76,6 +80,7 @@ final class NIP46Session: Identifiable, Hashable, Sendable {
         self.conversationKey = conversationKey
         self.connectedAt = connectedAt
         self.permissions = permissions
+        self.secret = secret
     }
 
     /// Creates a session from a parsed connection info and the signer's private key.
@@ -92,7 +97,8 @@ final class NIP46Session: Identifiable, Hashable, Sendable {
             clientPubkey: connectionInfo.pubkey,
             relays: connectionInfo.relays,
             conversationKey: convKey,
-            permissions: connectionInfo.permissions
+            permissions: connectionInfo.permissions,
+            secret: connectionInfo.secret
         )
     }
 

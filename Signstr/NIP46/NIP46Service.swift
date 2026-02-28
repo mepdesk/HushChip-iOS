@@ -100,15 +100,63 @@ final class NIP46Service: ObservableObject {
             subscribeToRelay(relayURL)
         }
 
-        // For client-initiated flow (nostrconnect://), also subscribe to the
-        // fallback relay so we can receive the client's connect request from either.
+        // For client-initiated flow (nostrconnect://), send connect response
+        // immediately so the client knows the signer is ready.
+        // Uses NIP-44 per current NIP-46 spec (all modern clients use nostr-tools
+        // which decrypts with NIP-44 only).
         if connectionInfo.flow == .clientInitiated {
-            let fallbackRelay = "wss://relay.damus.io"
-            if !session.relays.contains(fallbackRelay) {
-                print("[NIP46]   Adding fallback relay: \(fallbackRelay)")
-                subscribeToRelay(fallbackRelay)
+            let secret = connectionInfo.secret ?? ""
+            let clientPubkey = session.clientPubkey
+            let relays = session.relays
+            let convKey = session.conversationKey
+
+            print("[NIP46] Client-initiated flow — sending connect response (NIP-44)")
+            print("[NIP46]   Secret: \(secret.isEmpty ? "empty" : String(secret.prefix(8)) + "...")")
+
+            Task {
+                // Build relay list with fallback
+                let fallbackRelay = "wss://relay.damus.io"
+                var sendRelays = relays
+                if !sendRelays.contains(fallbackRelay) {
+                    sendRelays.append(fallbackRelay)
+                    print("[NIP46]   Adding fallback relay: \(fallbackRelay)")
+                    self.subscribeToRelay(fallbackRelay)
+                }
+
+                do {
+                    let response = NIP46Response.success(
+                        id: UUID().uuidString,
+                        result: secret
+                    )
+                    let encoder = JSONEncoder()
+                    encoder.outputFormatting = .sortedKeys
+                    let jsonData = try encoder.encode(response)
+                    guard let jsonString = String(data: jsonData, encoding: .utf8) else {
+                        print("[NIP46] ✗ Failed to encode connect response JSON")
+                        return
+                    }
+                    print("[NIP46]   Connect response JSON: \(jsonString)")
+
+                    let encrypted = try NIP44.encrypt(
+                        plaintext: jsonString,
+                        conversationKey: convKey
+                    )
+                    print("[NIP46]   Encrypted with NIP-44: \(encrypted.prefix(60))...")
+
+                    for relayURL in sendRelays {
+                        let isFallback = !relays.contains(relayURL)
+                        print("[NIP46] → Connect response (NIP-44) to \(relayURL)\(isFallback ? " (fallback)" : "")...")
+                        try await sendResponse(
+                            encryptedContent: encrypted,
+                            toClientPubkey: clientPubkey,
+                            relayURL: relayURL
+                        )
+                        print("[NIP46] ✓ Connect response sent to \(relayURL)\(isFallback ? " (fallback)" : "")")
+                    }
+                } catch {
+                    print("[NIP46] ✗ Failed to send connect response: \(error)")
+                }
             }
-            print("[NIP46] Client-initiated flow — waiting for client connect request...")
         }
 
         print("[NIP46] ── Connection added, listening for client requests ──")
@@ -457,61 +505,7 @@ final class NIP46Service: ObservableObject {
             print("[NIP46]   Request ID: \(request.id)")
             print("[NIP46]   Params count: \(request.params.count)")
 
-            // 2a. For connect, validate secret and respond on all relays
-            if request.method == "connect" {
-                print("[NIP46] Received connect request from \(session.displayName), id: \(request.id), validating secret...")
-
-                // Validate secret if one was provided in the original nostrconnect:// URI
-                if let expectedSecret = session.secret, !expectedSecret.isEmpty {
-                    // params[1] is the secret (params[0] is the client pubkey)
-                    let receivedSecret = request.params.count > 1 ? request.params[1] : ""
-                    if receivedSecret != expectedSecret {
-                        print("[NIP46] ✗ Secret mismatch — expected: \(expectedSecret.prefix(8))..., received: \(receivedSecret.prefix(8))...")
-                        let errorResponse = NIP46Response.error(
-                            id: request.id,
-                            message: "Invalid secret"
-                        )
-                        let encrypted = try encryptForSession(errorResponse, session: session)
-                        try await sendResponse(
-                            encryptedContent: encrypted,
-                            toClientPubkey: session.clientPubkey,
-                            relayURL: relayURL
-                        )
-                        return
-                    }
-                    print("[NIP46]   Secret validated OK")
-                } else {
-                    print("[NIP46]   No secret to validate (none in URI)")
-                }
-
-                // Build connect response with the client's request ID and result "ack"
-                let connectResponse = NIP46Response.success(
-                    id: request.id,
-                    result: "ack"
-                )
-                let encrypted = try encryptForSession(connectResponse, session: session)
-
-                // Send to all session relays (including fallback) so the client
-                // receives the response regardless of which relay it's listening on
-                var sendRelays = session.relays
-                let fallbackRelay = "wss://relay.damus.io"
-                if !sendRelays.contains(fallbackRelay) {
-                    sendRelays.append(fallbackRelay)
-                }
-
-                for relay in sendRelays {
-                    print("[NIP46] → Connect response to \(relay) (id: \(request.id))...")
-                    try await sendResponse(
-                        encryptedContent: encrypted,
-                        toClientPubkey: session.clientPubkey,
-                        relayURL: relay
-                    )
-                }
-                print("[NIP46] ✓ Connect response sent with matching id: \(request.id)")
-                return
-            }
-
-            // 2b. For sign_event, check approval policy before prompting
+            // 2. For sign_event, check approval policy before prompting
             if request.method == "sign_event" {
                 // Parse event details for logging
                 var eventKind = 0

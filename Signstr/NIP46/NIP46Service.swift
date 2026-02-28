@@ -41,7 +41,7 @@ final class NIP46Service: ObservableObject {
 
     /// Queued requests awaiting sequential processing (prevents concurrent approval sheets
     /// which cause Swift Task continuation misuse).
-    private var requestQueue: [(encryptedContent: String, session: NIP46Session, relayURL: String)] = []
+    private var requestQueue: [(encryptedContent: String, session: NIP46Session, relayURL: String, queuedAt: CFAbsoluteTime)] = []
 
     /// Tracks already-processed incoming event IDs to deduplicate events that arrive
     /// from multiple relays. Keyed by event ID, value is the time it was processed.
@@ -477,7 +477,8 @@ final class NIP46Service: ObservableObject {
 
     /// Adds a request to the sequential processing queue.
     private func enqueueRequest(encryptedContent: String, session: NIP46Session, relayURL: String) {
-        requestQueue.append((encryptedContent, session, relayURL))
+        let queuedAt = CFAbsoluteTimeGetCurrent()
+        requestQueue.append((encryptedContent, session, relayURL, queuedAt))
         print("[NIP46] Queued request (queue depth: \(requestQueue.count), processing: \(isProcessingRequest))")
         processNextInQueue()
     }
@@ -493,7 +494,8 @@ final class NIP46Service: ObservableObject {
             await processRequest(
                 encryptedContent: next.encryptedContent,
                 session: next.session,
-                relayURL: next.relayURL
+                relayURL: next.relayURL,
+                queuedAt: next.queuedAt
             )
             isProcessingRequest = false
             processNextInQueue()
@@ -518,10 +520,12 @@ final class NIP46Service: ObservableObject {
 
     /// Decrypts, handles, and responds to a NIP-46 request.
     /// For sign_event, pauses to show the approval UI before signing.
+    /// Auto-approved events fire-and-forget the relay send to unblock the queue immediately.
     private func processRequest(
         encryptedContent: String,
         session: NIP46Session,
-        relayURL: String
+        relayURL: String,
+        queuedAt: CFAbsoluteTime = CFAbsoluteTimeGetCurrent()
     ) async {
         do {
             // 1. Decrypt and parse request — auto-detect NIP-44 vs NIP-04
@@ -649,6 +653,61 @@ final class NIP46Service: ObservableObject {
                     print("[NIP46]   Safe kind \(eventKind) — auto-approving without prompt")
                 }
 
+                // ── Fast path: auto-approved sign_event ──
+                // Sign immediately, fire-and-forget the relay send, return instantly
+                // to unblock the queue for the next request.
+                if autoApprove, let privKey = signerPrivateKey {
+                    let signStart = CFAbsoluteTimeGetCurrent()
+                    let response = NIP46MessageHandler.handleSignEventDirect(
+                        request,
+                        signerPubkeyHex: signerPubkeyHex!,
+                        signerPrivateKey: privKey
+                    )
+                    let signEnd = CFAbsoluteTimeGetCurrent()
+
+                    // Log the signing request
+                    SigningLogStore.shared.log(
+                        appName: session.displayName,
+                        clientPubkey: session.clientPubkey,
+                        eventKind: eventKind,
+                        content: eventContent,
+                        approved: true,
+                        autoApproved: true,
+                        safeKindAutoApproved: safeKindAutoApprove,
+                        eventJSON: request.params.first ?? ""
+                    )
+                    ApprovalPolicyStore.recordFirstApproval(for: session.clientPubkey)
+
+                    // Encrypt response
+                    let encryptedResponse = try encryptForSession(response, session: session)
+
+                    // Fire-and-forget: send to relay without awaiting confirmation
+                    let clientPubkey = session.clientPubkey
+                    let sendStart = CFAbsoluteTimeGetCurrent()
+                    Task { [weak self] in
+                        do {
+                            try await self?.sendResponse(
+                                encryptedContent: encryptedResponse,
+                                toClientPubkey: clientPubkey,
+                                relayURL: relayURL
+                            )
+                            let sendEnd = CFAbsoluteTimeGetCurrent()
+                            let queueToSign = Int((signStart - queuedAt) * 1000)
+                            let signToSend = Int((sendEnd - signEnd) * 1000)
+                            let total = Int((sendEnd - queuedAt) * 1000)
+                            print("[NIP46] ⏱ sign_event kind:\(eventKind) queued→signed: \(queueToSign)ms signed→sent: \(signToSend)ms total: \(total)ms")
+                        } catch {
+                            print("[NIP46] ✗ Fire-and-forget send failed for kind \(eventKind): \(error)")
+                        }
+                    }
+
+                    // Log timing for the synchronous portion (queue unblocked here)
+                    let queueToSign = Int((signStart - queuedAt) * 1000)
+                    let signDuration = Int((signEnd - signStart) * 1000)
+                    print("[NIP46] ⏱ sign_event kind:\(eventKind) queued→signed: \(queueToSign)ms sign: \(signDuration)ms (relay send is fire-and-forget)")
+                    return
+                }
+
                 let approved: Bool
                 if autoApprove {
                     approved = true
@@ -699,9 +758,9 @@ final class NIP46Service: ObservableObject {
                 // Return pubkey directly — no biometric auth needed for public data
                 print("[NIP46] Handling get_public_key directly (no biometrics)")
                 response = .success(id: request.id, result: pubkey)
-            } else if request.method == "sign_event", autoApprove, let privKey = signerPrivateKey {
-                // Auto-approved sign_event: sign directly with SchnorrSigner to skip biometrics
-                print("[NIP46] Signing auto-approved event directly (no biometrics)")
+            } else if request.method == "sign_event", let privKey = signerPrivateKey {
+                // User-approved sign_event (autoApprove was false but user tapped approve)
+                print("[NIP46] Signing user-approved event directly (no biometrics)")
                 response = NIP46MessageHandler.handleSignEventDirect(
                     request,
                     signerPubkeyHex: signerPubkeyHex!,

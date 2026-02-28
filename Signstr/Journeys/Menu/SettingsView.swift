@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Gridmark Technologies Ltd (Signstr)
-// https://github.com/hushchip/Signstr-iOS
+// https://github.com/signstr/Signstr-iOS
 //
 // Based on Seedkeeper-iOS by Toporin / Satochip S.R.L.
 // https://github.com/Toporin/Seedkeeper-iOS
@@ -28,6 +28,9 @@ struct SettingsView: View {
 
     @State var expertModeIsOn: Bool = false
     @State var debugModeIsOn: Bool = false
+    @State var requireApprovalForAll: Bool = UserDefaults.standard.bool(
+        forKey: "signstr.require_approval_for_all"
+    )
 
     // MARK: - Literals
     let title = "settings"
@@ -98,6 +101,22 @@ struct SettingsView: View {
                                    isOn: $debugModeIsOn,
                                    onToggle: { newValue in
 
+                    })
+
+                    Spacer()
+                        .frame(height: SettingsView.dimensions.verticalGroupSeparator)
+
+                    SatoText(text: "Require approval for all events", style: .SKMenuItemTitle)
+                    Spacer()
+                        .frame(height: SettingsView.dimensions.verticalInsideGroupSeparator)
+                    SatoText(text: "When enabled, every signing request requires manual approval, including profile and relay updates.", style: .SKMenuItemSubtitle)
+                    Spacer()
+                        .frame(height: SettingsView.dimensions.verticalInsideGroupSeparator)
+                    SettingsToggle(title: "Require approval for all events",
+                                   backgroundColor: Color.sgBgSurface,
+                                   isOn: $requireApprovalForAll,
+                                   onToggle: { newValue in
+                        UserDefaults.standard.set(newValue, forKey: "signstr.require_approval_for_all")
                     })
 
                     Spacer()
